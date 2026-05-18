@@ -48,20 +48,20 @@ Mercury，一个本地优先 AI 阅读器课程项目。
 
 ## 团队分工
 
-| 编号 | 任务方向 | 负责人 |
-| --- | --- | --- |
-| T0 | 组长 | 51285903036 周彩纯 git用户名：zhoucaichun  |
-| T1 | Feed / OPML 解析 | 51285903058 张珈鸣 git用户名：DonFinliani |
-| T2 | 本地数据模型 / 存储 / Sync 基础 | 51285903053 林杨 git用户名：lyTAT |
-| T3 | 内容呈现 / 阅读页 | 51285903067 周康 git用户名：ReXT9527 |
-| T4 | Cleaned HTML | 51285903038 李欣然 git用户名：ranwan20 |
-| T5 | Cleaned Markdown | 51285903069 夏培玮 git用户名：maipower |
-| T6 | 定制阅读样式 | 51285903015 杜茗天 git用户名：jieshibang520 |
-| T7 | 产品体验 / 主界面整合 | 51285903044 余婧 git用户名：allacnobug |
-| T8 | LLM Agent 基础协议 | 51285903043 曾夏杨 git用户名：zxy-1a |
-| T9 | LLM Providers / 模型配置 / 用量统计展示 | 51285903049 蔡钦楠 git用户名：QinnanCai0115 |
-| T10 | Summary Agent | 51285903066 宋金淼 git用户名：songjinmiao |
-| T11 | Translation Agent / 单篇 Markdown 导出 | 51285903011 余富康 git用户名：suzy327 |
+| 编号 | 模块                                     | 负责人                                      | 主要产出                                                                   |
+| ---- | ---------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------- |
+| T0   | 组长 / 项目留痕                         | 51285903036 周彩纯 git用户名：zhoucaichun   | 产品范围、GitHub 管理、PRD、README、AGENTS、LLM 用量统计需求定义、最终验收 |
+| T1   | 项目骨架 / 跨平台开发环境 / 基础页面框架 | 51285903058 张珈鸣 git用户名：DonFinliani   | 项目初始化、目录结构、跨平台运行脚本、基础页面                             |
+| T2   | 数据模型 / 本地存储                      | 51285903053 林杨 git用户名：lyTAT           | Feed、Article、Content、AITaskRun、LLMUsageEvent 等模型                    |
+| T3   | Feed 解析 / Feed URL 添加                | 51285903067 周康 git用户名：ReXT9527        | RSS / Atom 解析和标准化文章数据                                            |
+| T4   | OPML 导入 / 订阅源管理                   | 51285903038 李欣然 git用户名：ranwan20      | OPML 解析、订阅源列表、订阅源管理                                          |
+| T5   | Sync / 文章同步 / 入库                   | 51285903069 夏培玮 git用户名：maipower      | 刷新订阅源、去重、入库、同步状态                                           |
+| T6   | Reader Pipeline / 内容清洗               | 51285903015 杜茗天 git用户名：jieshibang520 | source HTML、cleaned HTML、canonical Markdown                              |
+| T7   | 阅读器 UI / 内容呈现 / 阅读样式          | 51285903044 余婧 git用户名：allacnobug      | 文章列表、阅读器、阅读设置、摘要/翻译入口                                  |
+| T8   | Agent Runtime / Prompt Templates         | 51285903043 曾夏杨 git用户名：zxy-1a        | Agent 状态机、Prompt 模板、错误状态、共用调用契约                          |
+| T9   | LLM Providers / 模型配置 / 用量统计展示  | 51285903049 蔡钦楠 git用户名：QinnanCai0115 | 标准 API 配置、Provider / Model 统一调用接口、LLM Usage 统计面板           |
+| T10  | Summary Agent                            | 51285903066 宋金淼 git用户名：songjinmiao   | 摘要生成、摘要展示、摘要保存                                               |
+| T11  | Translation Agent / 单篇 Markdown 导出   | 51285903011 余富康 git用户名：suzy327       | 翻译生成、译文展示、单篇导出                                               |
 
 ## 五周计划
 
