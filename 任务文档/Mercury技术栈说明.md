@@ -1,8 +1,8 @@
-# Mercury 初步技术栈说明
+# Mercury 技术栈说明
 
-> 版本：v0.1  
-> 用途：5.22 粗略汇报、组员认领任务、后续 README / AGENTS / Issues 编写参考  
-> 说明：这是初步方案，5.22 老师点评后可以再调整。
+> 版本：v1.0
+> 用途：后续 README / AGENTS / Issues 编写、项目初始化、组员开发和课堂汇报参考
+> 说明：5.22 老师点评后，技术栈方向基本确认。后续除非实现中遇到明显问题，否则不再频繁更换主技术栈。
 
 ## 1. 我们做的是什么项目
 
@@ -42,9 +42,9 @@
 
 所以我们不能完全照搬老师的 SwiftUI 方案。我们会参考老师 Mercury 的产品结构和功能设计，但采用更适合跨平台的技术栈。
 
-## 3. 我们的初步技术栈
+## 3. 我们确定采用的技术栈
 
-我们的初步方案是：
+我们当前确定采用的方案是：
 
 ```text
 桌面端框架：Electron
@@ -423,24 +423,24 @@ README = 给老师看的项目总说明
 
 ## 5. 技术栈和任务分工的对应关系
 
-| 任务 | 主要相关技术 |
-| --- | --- |
-| T0 组长 / AI 产品负责人 / 项目留痕组长 | GitHub、README、AGENTS、Issues、PR 规则、项目验收 |
-| T1 Feed / OPML 解析 | rss-parser、fast-xml-parser / opmlparser、undici / node-fetch |
-| T2 本地数据模型 / 存储 / Sync 基础 | SQLite、TypeScript 数据类型、Electron 本地能力 |
-| T3 内容呈现 / 阅读页 | React、TypeScript、CSS、Cleaned HTML 展示 |
-| T4 Cleaned HTML | jsdom、@mozilla/readability、sanitize-html |
-| T5 Cleaned Markdown | turndown、Markdown 数据结构、单篇导出基础 |
-| T6 定制阅读样式 | React、CSS、阅读主题、字号、行宽等 |
-| T7 产品体验 / 主界面整合 | React、lucide-react、页面结构、交互体验 |
-| T8 LLM Agent 基础协议 | TypeScript 接口、Prompt 结构、Agent 输入输出 |
-| T9 LLM Providers / 模型配置 / 用量统计展示 | OpenAI-compatible API、模型配置、LLM Usage 面板 |
-| T10 Summary Agent | LLM Provider、Summary Prompt、文章摘要展示 |
-| T11 Translation Agent / 单篇 Markdown 导出 | LLM Provider、Translation Prompt、turndown、文件导出 |
+| 任务                                          | 主要相关技术                                                               |
+| --------------------------------------------- | -------------------------------------------------------------------------- |
+| T0 组长 / AI 产品负责人 / 项目留痕 / 测试验收 | GitHub、README、AGENTS、Issues、PR 规则、项目验收、测试记录                |
+| T1 项目骨架 / 跨平台开发环境 / 基础页面框架   | Electron、React、TypeScript、Vite、package scripts、mock 数据              |
+| T2 数据模型 / 本地存储                        | SQLite、TypeScript 数据类型、Electron 本地能力、LLMUsageEvent              |
+| T3 Feed 解析 / Feed URL 添加                  | rss-parser、undici / node-fetch、TypeScript 标准化输出                     |
+| T4 OPML 导入 / 订阅源管理                     | fast-xml-parser / opmlparser、SQLite、订阅源管理接口                       |
+| T5 Sync / 文章同步 / 入库                     | rss-parser 输出、SQLite、去重逻辑、同步状态                                |
+| T6 Reader Pipeline / 内容清洗                 | jsdom、@mozilla/readability、sanitize-html、turndown                       |
+| T7 阅读器 UI / 内容呈现 / 阅读样式 / 交互审查 | React、TypeScript、CSS、lucide-react、阅读设置、体验审查                   |
+| T8 Agent Runtime / Prompt Templates           | TypeScript 接口、Prompt 模板、Agent 状态机、usage record 契约              |
+| T9 LLM Providers / 模型配置 / 用量统计展示    | OpenAI-compatible API、模型配置、Provider 接口、LLM Usage 面板、多模型测试 |
+| T10 Summary Agent                             | LLM Provider、Summary Prompt、canonical Markdown、摘要展示和保存           |
+| T11 Translation Agent / 单篇 Markdown 导出    | LLM Provider、Translation Prompt、canonical Markdown、turndown、文件导出   |
 
-## 6. 初步目录结构建议
+## 6. 确定目录结构建议
 
-后续建仓库时，可以考虑这样的目录结构：
+后续建仓库时，建议按照这样的目录结构推进：
 
 ```text
 mercury-ai-reader/
@@ -455,12 +455,12 @@ mercury-ai-reader/
     components/
     pages/
     features/
-      feeds/
-      articles/
-      cleaning/
-      llm/
+      feed/
+      reader/
+      agent/
       export/
       usage/
+    core/
     styles/
   docs/
     PRD.md
@@ -471,17 +471,17 @@ mercury-ai-reader/
     pull_request_template.md
 ```
 
-这只是初步结构，不代表现在就必须完全建好。5.22 老师点评后，可以再定最终版本。
+这不是要求第一天全部建完，而是作为项目骨架和后续模块归档的统一方向。T1 初始化项目时优先保证基础结构、启动命令和 mock 页面可用，后续模块按这个结构逐步补齐。
 
-## 7. 5.22 汇报时可以怎么说
+## 7. 后续汇报时可以怎么说
 
 可以这样表述：
 
-> 我们参考老师 Mercury 的本地优先、桌面端、Feed 解析、内容清洗、LLM Provider 和 AI Agent 设计，但不会直接照搬 SwiftUI 技术栈。因为本次作业要求平台中立，需要支持 Windows、Linux 和 macOS，所以我们初步选择 Electron + React + TypeScript + SQLite。这个方案可以用桌面应用形态满足本地优先，也方便团队成员按 Feed、存储、阅读页、内容清洗、AI Agent、LLM Provider、用量统计和导出功能进行分工。5.22 老师点评后，我们会再根据建议调整技术细节，并同步到 README、AGENTS 和 Issues。
+> 我们参考老师 Mercury 的本地优先、桌面端、Feed 解析、内容清洗、LLM Provider 和 AI Agent 设计，但不会直接照搬 SwiftUI 技术栈。因为本次作业要求平台中立，需要支持 Windows、Linux 和 macOS，所以我们确定采用 Electron + React + TypeScript + Vite + SQLite。这个方案可以用桌面应用形态满足本地优先，也方便团队成员按项目骨架、数据模型、Feed、OPML、Sync、Reader Pipeline、阅读器 UI、AI Agent、LLM Provider、用量统计和导出功能进行分工。
 
 ## 8. 当前结论
 
-当前推荐采用：
+当前确定采用：
 
 ```text
 Electron + React + TypeScript + Vite + SQLite
