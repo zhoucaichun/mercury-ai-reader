@@ -1,0 +1,51 @@
+[
+  {
+    "id": "deepseek",
+    "name": "DeepSeek",
+    "kind": "openai-compatible",
+    "baseUrl": "https://api.deepseek.com/v1",
+    "apiKeyEnv": "DEEPSEEK_API_KEY",
+    "model": "deepseek-chat",
+    "timeoutMs": 30000,
+    "enabled": false
+  },
+  {
+    "id": "school-compatible",
+    "name": "School model endpoint",
+    "kind": "openai-compatible",
+    "baseUrl": "https://<school-llm-endpoint>/v1",
+    "apiKeyEnv": "SCHOOL_LLM_API_KEY",
+    "model": "<model-name>",
+    "timeoutMs": 30000,
+    "enabled": false
+  },
+  {
+    "id": "hymt2",
+    "name": "hymt2 compatible endpoint",
+    "kind": "openai-compatible",
+    "baseUrl": "https://<hymt2-endpoint>/v1",
+    "apiKeyEnv": "HYMT2_API_KEY",
+    "model": "<hymt2-model>",
+    "timeoutMs": 30000,
+    "enabled": false
+  },
+  {
+    "id": "ollama-local",
+    "name": "Ollama local",
+    "kind": "openai-compatible",
+    "baseUrl": "http://localhost:11434/v1",
+    "apiKey": "ollama",
+    "model": "qwen2.5:7b",
+    "timeoutMs": 30000,
+    "enabled": false
+  },
+  {
+    "id": "mock-local",
+    "name": "Mock local provider",
+    "kind": "mock",
+    "baseUrl": "mock://local",
+    "model": "mock-model",
+    "timeoutMs": 1000,
+    "enabled": true
+  }
+]
