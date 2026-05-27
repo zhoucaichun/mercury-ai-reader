@@ -1,4 +1,4 @@
-# Mercury 五周排期与每周集成计划（5.25开始）
+# Mercury 五周排期与每周集成计划
 
 ## 总体策略
 
@@ -13,14 +13,26 @@
 3. main 分支始终尽量保持可运行；
 4. 每个人每周都有可追踪的 GitHub 贡献；
 5. 每周集成结果决定下一周是否调整范围；
-6. 第 5 周冻结新功能，只做修复、文档和演示。
+6. 第 5 周冻结新功能，只做修复、文档和演示；
 
-## 每周固定节奏
+## 5.22 老师反馈后的排期调整
+
+老师反馈后，排期做以下调整：
+
+1. Week 1 不只是项目启动，也要完成反馈调整、技术定型和简易原型；
+2. T8-T11 不再按线性等待推进，而是作为 AI 小组并行协作；
+3. T0 负责测试和最终验收，T7 负责交互审查；
+4. T9 的多模型测试需要提前规划，后续尽量覆盖 DeepSeek、学校模型、hymt2 或本地模型；
+5. 下次汇报重点展示最终技术选型、修正版 Plan 和简易原型。
+
+## 每周固定节奏（按周五需要汇报进行了修改）
 
 ```text
-每周五前提交 PR
-每周日前完成本周集成
+每周三前提交 PR
+每周五前完成本周集成
 ```
+
+如果遇到课堂汇报节点，则汇报前一天先提交轻量成果，不要求完整功能，但必须能说明设计、接口、原型或验证结果。
 
 ## PR 提交要求
 
@@ -37,61 +49,40 @@
 ```markdown
 ## 本周完成
 
--
-
 ## 验证方式
-
--
 
 ## 截图 / 日志
 
--
-
 ## 影响模块
-
--
 
 ## 未完成 / 风险
 
--
 ```
 
-## 组长每周审核重点
-
-组长每周只重点审核 5 件事：
-
-1. 项目能不能运行；
-2. 是否符合本周验收标准；
-3. 是否影响下周任务；
-4. 是否有成员没有提交；
-5. 是否需要调整接口或范围。
-
-组长不需要替每个成员逐行改代码，重点是控制范围、合并节奏、接口一致性和最终可交付结果。
-
-## 第 1 周：项目启动 + 架构契约
+## 第 1 周：5.22-5.29｜反馈调整 + 技术定型 + 简易原型 + 架构契约
 
 ### 本周目标
 
-让所有人可以开始开发，不互相等待。
+完成老师反馈后的修正版计划、最终技术选型和简易原型。
 
-本周结束时，项目至少要能启动，有基础页面，有 mock 数据，有初版 README 和 AGENTS。
+本周结束时，项目至少要能启动，有基础页面或可展示原型，有 mock 数据，有初版 README 和 AGENTS。后天汇报前，先提交轻量成果：技术选型说明、Plan 调整、简易原型、核心接口草案。
 
 ### 本周必须交付
 
-| 任务                                        | 本周交付                                                         |
-| ------------------------------------------- | ---------------------------------------------------------------- |
-| T0 组长 / AI 产品负责人 / 项目留痕          | GitHub 仓库、成员邀请、Issues、PR 规则、README 初版、AGENTS 初版 |
-| T1 项目骨架 / 跨平台开发环境 / 基础页面框架 | 项目骨架、跨平台启动命令、基础页面、mock 数据                    |
-| T2 数据模型 / 本地存储                      | 数据模型草案和基础存储接口                                       |
-| T3 Feed 解析 / Feed URL 添加                | Feed 解析接口设计和至少 1 个 RSS/Atom 解析样例                   |
-| T4 OPML 导入 / 订阅源管理                   | OPML 解析接口设计和 1 个 OPML 样例                               |
-| T5 Sync / 文章同步 / 入库                   | Sync 流程设计，先用 mock feed 结果                               |
-| T6 Reader Pipeline / 内容清洗               | Reader Pipeline 设计，mock HTML -> cleaned text / Markdown 原型  |
-| T7 阅读器 UI / 内容呈现 / 阅读样式          | 文章列表 + 阅读器 mock UI                                        |
-| T8 Agent Runtime / Prompt Templates         | Agent Runtime 状态设计 + prompt template 文件结构                |
-| T9 LLM Providers / 模型配置 / 用量统计展示  | LLM Provider 接口设计 + mock provider                            |
-| T10 Summary Agent                           | Summary Agent mock 流程                                          |
-| T11 Translation Agent / 单篇 Markdown 导出  | Translation Agent mock 流程 + 导出模板草案                       |
+| 任务                                          | 本周交付                                                                                     |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| T0 组长 / AI 产品负责人 / 项目留痕 / 测试验收 | GitHub 仓库、成员邀请、Issues、PR 规则、README 初版、AGENTS 初版、老师反馈整理、测试验收清单 |
+| T1 项目骨架 / 跨平台开发环境 / 基础页面框架   | 项目骨架、跨平台启动命令、基础页面、mock 数据                                                |
+| T2 数据模型 / 本地存储                        | 数据模型草案和基础存储接口                                                                   |
+| T3 Feed 解析 / Feed URL 添加                  | Feed 解析接口设计和至少 1 个 RSS/Atom 解析样例                                               |
+| T4 OPML 导入 / 订阅源管理                     | OPML 解析接口设计和 1 个 OPML 样例                                                           |
+| T5 Sync / 文章同步 / 入库                     | Sync 流程设计，先用 mock feed 结果                                                           |
+| T6 Reader Pipeline / 内容清洗                 | Reader Pipeline 设计，mock HTML -> cleaned text / Markdown 原型                              |
+| T7 阅读器 UI / 内容呈现 / 阅读样式 / 交互审查 | 文章列表 + 阅读器 mock UI、简易交互原型、体验审查清单                                        |
+| T8 Agent Runtime / Prompt Templates           | Agent Runtime 状态设计 + prompt template 文件结构                                            |
+| T9 LLM Providers / 模型配置 / 用量统计展示    | LLM Provider 接口设计 + mock provider、多模型测试方案                                        |
+| T10 Summary Agent                             | Summary Agent mock 流程                                                                      |
+| T11 Translation Agent / 单篇 Markdown 导出    | Translation Agent mock 流程 + 导出模板草案                                                   |
 
 ### 第 1 周集成验收
 
@@ -102,6 +93,7 @@
 README 有运行方式和分工初版
 AGENTS 有基本规则
 每个人至少一个 PR
+后天汇报前有最终技术选型、修正版 Plan 和简易原型材料
 ```
 
 ### 组长审核重点
@@ -110,7 +102,9 @@ AGENTS 有基本规则
 2. 目录结构是否清晰；
 3. 是否有写死平台路径；
 4. 每个人是否真的有 commit；
-5. 各模块接口有没有明显冲突。
+5. 各模块接口有没有明显冲突；
+6. 简易原型是否能说明最终产品流程；
+7. T8-T11 的 AI 小组接口是否统一。
 
 ## 第 2 周：Feed / OPML / Sync / 本地数据主链路
 
@@ -136,6 +130,10 @@ AGENTS 有基本规则
 | T10 Summary Agent                           | Summary 继续基于 mock 文本，但接口改为接收 Article / Content |
 | T11 Translation Agent / 单篇 Markdown 导出  | Translation / Export 接口改为接收 Article / Content          |
 | T0 组长 / AI 产品负责人 / 项目留痕          | 更新 README 的数据流说明和本周集成记录                       |
+
+### 多模型测试准备
+
+从第 2 周开始，T9 需要准备至少 2-3 个 OpenAI-compatible 模型服务的配置和连通性测试方案，例如 DeepSeek、学校模型、hymt2 或本地模型。第 2 周不要求全部真实调用成功，但要明确 base URL、model、API key 配置方式和失败提示策略。
 
 ### 第 2 周集成验收
 
@@ -206,17 +204,17 @@ AI 主链路跑通。
 
 ### 本周必须交付
 
-| 任务                                       | 本周交付                                                                                      |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| T8 Agent Runtime / Prompt Templates        | Agent Runtime 状态：idle / running / succeeded / failed，可被 UI 使用；usage record 契约前置     |
-| T9 LLM Providers / 模型配置 / 用量统计展示 | 真实 OpenAI-compatible Provider 调用，支持 base URL / API key / model；LLM Usage 统计面板可用 |
-| T10 Summary Agent                          | Summary Agent 调用真实或可配置模型，保存并展示结果，并持续产出 usage record                    |
-| T11 Translation Agent / 单篇 Markdown 导出 | Translation Agent 调用真实或可配置模型，保存并展示结果；单篇 Markdown 导出可用，并持续产出 usage record |
-| T2 数据模型 / 本地存储                     | AITaskRun / LLMUsageEvent 存储可用，前 3 周先把 usage 记录落库                                  |
-| T7 阅读器 UI / 内容呈现 / 阅读样式         | 阅读器中预留 Summary、Translation、Export 入口，Usage 面板由 T9 主实现并挂接入口              |
-| T6 Reader Pipeline / 内容清洗              | 为 AI 提供稳定 Markdown 输入                                                                  |
-| T5 Sync / 文章同步 / 入库                  | 修复同步和内容流中的集成问题                                                                  |
-| T0 组长 / AI 产品负责人 / 项目留痕         | LLM 用量统计验收、补 usage 文档、检查 API key 不提交仓库                                      |
+| 任务                                          | 本周交付                                                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| T8 Agent Runtime / Prompt Templates           | Agent Runtime 状态：idle / running / succeeded / failed，可被 UI 使用；usage record 契约前置            |
+| T9 LLM Providers / 模型配置 / 用量统计展示    | 真实 OpenAI-compatible Provider 调用，支持 base URL / API key / model；LLM Usage 统计面板可用           |
+| T10 Summary Agent                             | Summary Agent 调用真实或可配置模型，保存并展示结果，并持续产出 usage record                             |
+| T11 Translation Agent / 单篇 Markdown 导出    | Translation Agent 调用真实或可配置模型，保存并展示结果；单篇 Markdown 导出可用，并持续产出 usage record |
+| T2 数据模型 / 本地存储                        | AITaskRun / LLMUsageEvent 存储可用，前 3 周先把 usage 记录落库                                          |
+| T7 阅读器 UI / 内容呈现 / 阅读样式            | 阅读器中预留 Summary、Translation、Export 入口，Usage 面板由 T9 主实现并挂接入口                        |
+| T6 Reader Pipeline / 内容清洗                 | 为 AI 提供稳定 Markdown 输入                                                                            |
+| T5 Sync / 文章同步 / 入库                     | 修复同步和内容流中的集成问题                                                                            |
+| T0 组长 / AI 产品负责人 / 项目留痕 / 测试验收 | LLM 用量统计验收、补 usage 文档、检查 API key 不提交仓库、完成 AI 功能集成测试                          |
 
 ### 第 4 周集成验收
 
@@ -227,6 +225,7 @@ AI 主链路跑通。
 能看到 LLM 调用记录
 能导出当前文章 Markdown
 API key 不出现在仓库
+至少完成 2-3 个模型服务的配置或连通性测试说明
 ```
 
 ### 说明
@@ -245,7 +244,8 @@ LLM 用量统计不会等到第 4 周才开始。正确推进方式是：
 2. API key 是否安全；
 3. Summary / Translation 是否共用 Provider / Agent 契约；
 4. Usage 是否按每次 request 记录；
-5. 单篇导出是否格式清楚。
+5. 单篇导出是否格式清楚；
+6. 多模型配置是否真的符合大模型中立要求。
 
 ## 第 5 周：冻结功能 + 测试 + 文档 + 演示
 
@@ -265,20 +265,20 @@ LLM 用量统计不会等到第 4 周才开始。正确推进方式是：
 
 ### 本周必须交付
 
-| 任务                                        | 本周交付                                                      |
-| ------------------------------------------- | ------------------------------------------------------------- |
-| T0 组长 / AI 产品负责人 / 项目留痕          | README 完整版、成员分工、演示流程、平台中立说明、最终验收清单 |
-| T1 项目骨架 / 跨平台开发环境 / 基础页面框架 | 三平台运行说明最终版，检查启动命令                            |
-| T2 数据模型 / 本地存储                      | 数据模型稳定，清理测试数据或示例数据                          |
-| T3 Feed 解析 / Feed URL 添加                | Feed 解析稳定，提供测试 Feed 列表                             |
-| T4 OPML 导入 / 订阅源管理                   | OPML 示例和订阅源管理稳定                                     |
-| T5 Sync / 文章同步 / 入库                   | Sync 异常处理和状态提示稳定                                   |
-| T6 Reader Pipeline / 内容清洗               | 内容清洗样例和边界说明                                        |
-| T7 阅读器 UI / 内容呈现 / 阅读样式          | UI 打磨，截图，空状态 / 错误状态                              |
-| T8 Agent Runtime / Prompt Templates         | Prompt 模板和 Agent 状态文档                                  |
-| T9 LLM Providers / 模型配置 / 用量统计展示  | LLM Provider 配置说明、LLM Usage 统计验收                     |
-| T10 Summary Agent                           | Summary 功能说明和验收样例                                    |
-| T11 Translation Agent / 单篇 Markdown 导出  | Translation / Export 功能说明和验收样例                       |
+| 任务                                          | 本周交付                                                                    |
+| --------------------------------------------- | --------------------------------------------------------------------------- |
+| T0 组长 / AI 产品负责人 / 项目留痕 / 测试验收 | README 完整版、成员分工、演示流程、平台中立说明、最终验收清单、最终测试记录 |
+| T1 项目骨架 / 跨平台开发环境 / 基础页面框架   | 三平台运行说明最终版，检查启动命令                                          |
+| T2 数据模型 / 本地存储                        | 数据模型稳定，清理测试数据或示例数据                                        |
+| T3 Feed 解析 / Feed URL 添加                  | Feed 解析稳定，提供测试 Feed 列表                                           |
+| T4 OPML 导入 / 订阅源管理                     | OPML 示例和订阅源管理稳定                                                   |
+| T5 Sync / 文章同步 / 入库                     | Sync 异常处理和状态提示稳定                                                 |
+| T6 Reader Pipeline / 内容清洗                 | 内容清洗样例和边界说明                                                      |
+| T7 阅读器 UI / 内容呈现 / 阅读样式 / 交互审查 | UI 打磨，截图，空状态 / 错误状态，最终交互审查问题清单                      |
+| T8 Agent Runtime / Prompt Templates           | Prompt 模板和 Agent 状态文档                                                |
+| T9 LLM Providers / 模型配置 / 用量统计展示    | LLM Provider 配置说明、LLM Usage 统计验收                                   |
+| T10 Summary Agent                             | Summary 功能说明和验收样例                                                  |
+| T11 Translation Agent / 单篇 Markdown 导出    | Translation / Export 功能说明和验收样例                                     |
 
 ### 第 5 周最终验收
 
@@ -310,7 +310,7 @@ API key 没有泄露
 第 2 周：T3 / T4 / T5 / T2 打通数据进入
 第 3 周：T6 / T7 打通阅读和 Markdown
 第 4 周：T8 / T9 / T10 / T11 / T2 打通 AI 和 usage 展示收口
-第 5 周：T0 全面收口
+第 5 周：T0 全面测试和文档收口，T7 完成交互体验收口
 ```
 
 如果某周有人没完成，影响最大的是：
