@@ -79,7 +79,7 @@ interface SummaryOutput {
     promptTokens?: number;
     completionTokens?: number;
     totalTokens?: number;
-    estimated?: boolean;
+    isEstimated?: boolean;
   };
 }
 ```
@@ -218,7 +218,7 @@ Summary Agent 不重复实现 Agent 状态机，统一接入 T8 Runtime。
 
 需要 T8 提供：
 
-- Agent 状态：`idle / running / succeeded / failed / cancelled`；
+- Agent 状态：`idle / queued / running / succeeded / failed / cancelled`；
 - Prompt 模板加载方式；
 - Prompt 参数渲染方式；
 - `runAgent()` 或等价统一调用接口；
@@ -274,7 +274,7 @@ interface LLMProvider {
       promptTokens?: number;
       completionTokens?: number;
       totalTokens?: number;
-      estimated?: boolean;
+      isEstimated?: boolean;
     };
   }>;
 }
@@ -285,13 +285,13 @@ Week 1 可先使用 `MockLLMProvider`：
 ```text
 输入：Mock article Markdown
 输出：固定 Markdown 摘要
-usage：promptTokens=120, completionTokens=80, totalTokens=200, estimated=true
+usage：promptTokens=120, completionTokens=80, totalTokens=200, isEstimated=true
 ```
 
 需要和 T9 对齐的待确认项：
 
 - Provider 返回字段名；
-- token usage 是否允许估算；
+- token usage 是否允许估算，估算值字段统一使用 `isEstimated`；
 - provider / model 配置来源；
 - 调用失败时的错误结构；
 - 多模型测试时 provider name 和 model name 的展示格式。
@@ -314,7 +314,7 @@ interface SummaryUsageRecord {
   promptTokens?: number;
   completionTokens?: number;
   totalTokens?: number;
-  estimated?: boolean;
+  isEstimated?: boolean;
   errorMessage?: string;
   createdAt: string;
 }
