@@ -127,6 +127,35 @@ export const mockDataset: MercuryMockDataset = {
       updatedAt: '2026-05-28T05:42:00.000Z'
     }
   ],
+  translationResults: [
+    {
+      id: 'translation-001',
+      articleId: 'article-local-first-sync',
+      targetLanguage: 'zh-CN',
+      translatedText:
+        '# 设计一个本地优先的同步循环\n\nMercury 将 feed 元数据、文章记录、清洗后的内容和 AI 结果首先保存在用户设备上。\n\n同步从 feed URL 开始，标准化文章元数据，然后通过本地持久层存储记录。\n\n第一个 T1 mock 保持这些边界可见，以便 T2、T3、T5 和 T7 可以逐步集成。',
+      status: 'succeeded',
+      providerId: 'provider-openai-compatible',
+      model: 'mock-reader-model',
+      promptTokens: 760,
+      completionTokens: 212,
+      totalTokens: 972,
+      createdAt: '2026-05-28T05:44:00.000Z',
+      updatedAt: '2026-05-28T05:44:00.000Z'
+    },
+    {
+      id: 'translation-002',
+      articleId: 'article-agent-contract',
+      targetLanguage: 'zh-CN',
+      translatedText:
+        '# 保持 Agent Runtime 和 Provider 契约分离\n\nMercury 将 Agent Runtime 放在 agent 功能区域下，将 usage 记录放在 usage 功能区域下。\n\nProvider 配置应该放在 agent 契约旁边，因为 Summary 和 Translation 应该共享同一个调用形状。\n\n这避免了一个并行的 src/features/llm 树，它会导致与最终目录计划冲突。',
+      status: 'idle',
+      providerId: 'provider-openai-compatible',
+      model: 'mock-reader-model',
+      createdAt: '2026-05-28T04:00:00.000Z',
+      updatedAt: '2026-05-28T04:00:00.000Z'
+    }
+  ],
   usageEvents: [
     {
       id: 'usage-001',

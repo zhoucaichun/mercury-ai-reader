@@ -459,10 +459,18 @@ button {
 }
 
 .usage-total {
-  margin: 14px 0;
+  margin: 14px 0 4px;
   color: #1f2a2a;
   font-size: 25px;
   font-weight: 850;
+}
+
+.usage-summary-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  color: #68736f;
+  font-size: 13px;
 }
 
 .usage-list {
@@ -474,6 +482,7 @@ button {
 .usage-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 10px;
   padding: 9px 0;
   color: #68736f;
@@ -481,8 +490,54 @@ button {
   font-size: 13px;
 }
 
-.usage-row strong {
+.usage-row-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.usage-row-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-weight: 700;
   color: #304e68;
+}
+
+.usage-badge {
+  display: inline-block;
+  min-width: 64px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: capitalize;
+  background: #e4ece8;
+  color: #2f4843;
+}
+
+.usage-badge-translation {
+  background: #e8e0f0;
+  color: #4a3a5e;
+}
+
+.usage-model {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #68736f;
+}
+
+.usage-failed {
+  color: #873638;
+}
+
+.usage-estimated {
+  color: #a46b2d;
+  font-size: 11px;
 }
 
 .contract-strip {
@@ -500,6 +555,64 @@ button {
   background: #e8e2d4;
   border-radius: 999px;
   font-weight: 700;
+}
+
+/* ─── Agent states (T10 / T11) ─────────────────────────────────── */
+
+.agent-idle {
+  margin: 14px 0;
+}
+
+.agent-running {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 24px 0;
+  color: #2f675c;
+  text-align: center;
+}
+
+.agent-running p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.agent-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 24px 0;
+  color: #873638;
+  text-align: center;
+}
+
+.agent-error p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.agent-hint {
+  margin: 0;
+  color: #68736f;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.agent-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .empty-state {

@@ -60,6 +60,34 @@ export type LLMUsageEventPreview = {
   createdAt: string;
 };
 
+// T11: Translation result persisted after a translation run
+export type TranslationResult = {
+  id: string;
+  articleId: string;
+  targetLanguage: string;
+  translatedText: string;
+  status: AgentRunStatus;
+  providerId: string;
+  model: string;
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// T11: Fields assembled for single-article Markdown export
+export type MarkdownExportData = {
+  title: string;
+  url: string;
+  author: string;
+  publishedAt: string;
+  summaryText?: string;
+  translatedText?: string;
+  canonicalMarkdown: string;
+};
+
 export type MercuryMockDataset = {
   feeds: Feed[];
   articles: Article[];
@@ -67,4 +95,5 @@ export type MercuryMockDataset = {
   providers: ProviderPreview[];
   agentPreviews: AgentPreview[];
   usageEvents: LLMUsageEventPreview[];
+  translationResults: TranslationResult[];
 };
