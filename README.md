@@ -192,7 +192,7 @@ T9 相关代码建议按职责放置：
 | T4   | OPML 导入 / 订阅源管理                   | 51285903038 李欣然 git用户名：ranwan20      | OPML 解析、订阅源列表、订阅源管理                                          |
 | T5   | Sync / 文章同步 / 入库                   | 51285903069 夏培玮 git用户名：maipower      | 刷新订阅源、去重、入库、同步状态                                           |
 | T6   | Reader Pipeline / 内容清洗               | 51285903015 杜茗天 git用户名：jieshibang520 | source HTML、cleaned HTML、canonical Markdown                              |
-| T7   | 阅读器 UI / 内容呈现 / 阅读样式          | 51285903044 余婧 git用户名：allacnobug      | 文章列表、阅读器、阅读设置、摘要/翻译入口                                  |
+| T7   | 阅读器 UI / 内容呈现 / 阅读样式          | 51285903044 余婧 git用户名：allacnobug      | 文章列表、阅读器、阅读设置、摘要/翻译入口；见 [T7 Reader UI Prototype](docs/features/T7-reader-ui-prototype.html)、[T7 Reader UI Plan](docs/features/T7-reader-ui-plan.md) 和 [T7 UX Review Checklist](docs/features/T7-ux-review-checklist.md) |
 | T8   | Agent Runtime / Prompt Templates         | 51285903043 曾夏杨 git用户名：zxy-1a        | Agent 状态机、Prompt 模板、错误状态、共用调用契约                          |
 | T9   | LLM Providers / 模型配置 / 用量统计展示  | 51285903049 蔡钦楠 git用户名：QinnanCai0115 | 标准 API 配置、Provider / Model 统一调用接口、LLM Usage 统计面板           |
 | T10  | Summary Agent                            | 51285903066 宋金淼 git用户名：songjinmiao   | 摘要生成、摘要展示、摘要保存                                               |
