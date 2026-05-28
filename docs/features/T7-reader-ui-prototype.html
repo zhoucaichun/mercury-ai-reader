@@ -586,6 +586,62 @@
         color: var(--muted);
       }
 
+      .agent-panel {
+        margin: 0 0 28px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-soft);
+        overflow: hidden;
+      }
+
+      .agent-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .agent-panel h2 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .agent-state {
+        border-radius: 999px;
+        padding: 4px 9px;
+        background: color-mix(in srgb, var(--accent) 12%, transparent);
+        color: var(--accent-strong);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .agent-panel-body {
+        padding: 14px;
+        color: var(--text);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .agent-panel-body p {
+        margin: 0 0 0.7em;
+      }
+
+      .agent-panel-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 0 14px 14px;
+      }
+
+      .agent-panel-actions button {
+        min-height: 32px;
+        border-radius: 7px;
+        padding: 0 10px;
+        font-size: 13px;
+      }
+
       .sidebar-resize,
       .inspector-resize {
         cursor: col-resize;
@@ -765,6 +821,52 @@
         color: var(--muted);
         font-size: 12px;
         line-height: 1.55;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .metric-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px;
+        background: var(--panel-soft);
+      }
+
+      .metric-card span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .metric-card strong {
+        display: block;
+        margin-top: 3px;
+        color: var(--text);
+        font-size: 15px;
+      }
+
+      .usage-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px;
+        background: var(--panel-soft);
+        font-size: 12px;
+      }
+
+      .usage-row strong,
+      .usage-row span {
+        display: block;
+      }
+
+      .usage-row span {
+        color: var(--muted);
       }
 
       .state-box {
@@ -1044,6 +1146,20 @@
             <p class="article-kicker" id="articleKicker">Reader Preview</p>
             <h1 class="article-title" id="articleTitle"></h1>
             <div class="article-meta" id="articleMeta"></div>
+            <section class="agent-panel" aria-label="Summary Agent result">
+              <div class="agent-panel-header">
+                <h2>摘要 Summary</h2>
+                <span class="agent-state" id="summaryStateLabel">idle</span>
+              </div>
+              <div class="agent-panel-body" id="summaryBody">
+                摘要尚未生成。点击顶部“摘要”或右侧状态按钮后，这里展示 Summary Agent 的运行状态和结果。
+              </div>
+              <div class="agent-panel-actions">
+                <button type="button" data-summary-action="regenerate">重新生成</button>
+                <button type="button" data-summary-action="copy">复制</button>
+                <button type="button" data-summary-action="clear">清除</button>
+              </div>
+            </section>
             <div class="reader-body" id="readerBody"></div>
           </div>
         </article>
@@ -1126,6 +1242,59 @@
           <section class="panel-section" data-collapsible>
             <button class="panel-toggle" type="button" aria-expanded="true">
               <span class="panel-title">
+                <h3>Provider 与 Usage</h3>
+                T9 模型配置、用量统计、多模型测试
+              </span>
+              <span class="chevron" aria-hidden="true">⌄</span>
+            </button>
+            <div class="panel-content">
+              <div class="state-box">
+                <strong>当前 Provider</strong>
+                OpenAI-compatible · qwen-plus · base URL 已配置 · API Key 本地保存
+              </div>
+              <div class="segmented" role="group" aria-label="Provider 配置入口">
+                <button data-provider-action="config" class="is-active">配置</button>
+                <button data-provider-action="test">连通测试</button>
+                <button data-provider-action="switch">切换模型</button>
+              </div>
+              <div class="metric-grid">
+                <div class="metric-card">
+                  <span>今日调用</span>
+                  <strong>12</strong>
+                </div>
+                <div class="metric-card">
+                  <span>成功 / 失败</span>
+                  <strong>11 / 1</strong>
+                </div>
+                <div class="metric-card">
+                  <span>估算 tokens</span>
+                  <strong>18.4k</strong>
+                </div>
+                <div class="metric-card">
+                  <span>当前模型</span>
+                  <strong>qwen-plus</strong>
+                </div>
+              </div>
+              <div class="usage-row">
+                <div>
+                  <strong>Summary · succeeded</strong>
+                  <span>qwen-plus · 1.8k tokens</span>
+                </div>
+                <span>刚刚</span>
+              </div>
+              <div class="usage-row">
+                <div>
+                  <strong>Translation · running</strong>
+                  <span>local-model · 3.2k tokens</span>
+                </div>
+                <span>2 min</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel-section" data-collapsible>
+            <button class="panel-toggle" type="button" aria-expanded="true">
+              <span class="panel-title">
                 <h3>主题</h3>
                 浅色、深色、护眼
               </span>
@@ -1143,7 +1312,7 @@
           <section class="panel-section" data-collapsible>
             <button class="panel-toggle" type="button" aria-expanded="true">
               <span class="panel-title">
-                <h3>状态演示</h3>
+                <h3>页面状态演示</h3>
                 加载、空状态、错误状态
               </span>
               <span class="chevron" aria-hidden="true">⌄</span>
@@ -1165,6 +1334,28 @@
           <section class="panel-section" data-collapsible>
             <button class="panel-toggle" type="button" aria-expanded="true">
               <span class="panel-title">
+                <h3>Agent Runtime 状态</h3>
+                idle / queued / running / succeeded / failed / cancelled
+              </span>
+              <span class="chevron" aria-hidden="true">⌄</span>
+            </button>
+            <div class="panel-content">
+              <div class="segmented" role="group" aria-label="Summary Agent 状态">
+                <button data-agent-state="idle" class="is-active">idle</button>
+                <button data-agent-state="queued">queued</button>
+                <button data-agent-state="running">running</button>
+              </div>
+              <div class="segmented" role="group" aria-label="Summary Agent 结果状态">
+                <button data-agent-state="succeeded">succeeded</button>
+                <button data-agent-state="failed">failed</button>
+                <button data-agent-state="cancelled">cancelled</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel-section" data-collapsible>
+            <button class="panel-toggle" type="button" aria-expanded="true">
+              <span class="panel-title">
                 <h3>AI 与导出入口</h3>
                 Summary、Translation、Export
               </span>
@@ -1173,7 +1364,7 @@
             <div class="panel-content ai-stack">
               <div class="ai-card">
                 <h4>摘要 Summary</h4>
-                <p>预留给 T10。当前原型展示入口位置和状态反馈。</p>
+                <p>预留给 T10。阅读区已包含摘要卡片、重新生成、复制、清除和 Runtime 状态展示。</p>
               </div>
               <div class="ai-card">
                 <h4>翻译 Translation</h4>
@@ -1262,6 +1453,8 @@
       const articleTitle = document.querySelector("#articleTitle");
       const articleMeta = document.querySelector("#articleMeta");
       const readerBody = document.querySelector("#readerBody");
+      const summaryStateLabel = document.querySelector("#summaryStateLabel");
+      const summaryBody = document.querySelector("#summaryBody");
       const toast = document.querySelector("#toast");
       const statusReading = document.querySelector("#statusReading");
       const fontRange = document.querySelector("#fontRange");
@@ -1275,6 +1468,7 @@
       let toastTimer = null;
       let currentFilter = "all";
       let demoState = "normal";
+      let summaryState = "idle";
       let activeResize = null;
       let savedSidebarWidth = 318;
       let savedInspectorWidth = 310;
@@ -1449,6 +1643,23 @@
         }, 1800);
       }
 
+      function setSummaryState(nextState) {
+        summaryState = nextState;
+        summaryStateLabel.textContent = nextState;
+        setActiveButton("data-agent-state", nextState);
+
+        const content = {
+          idle: "摘要尚未生成。点击顶部“摘要”后，这里展示 Summary Agent 的运行状态和结果。",
+          queued: "摘要任务已进入队列，等待 Agent Runtime 调度。",
+          running: "Summary Agent 正在基于 canonical Markdown 生成摘要，请稍候。",
+          succeeded: "<p>这篇文章说明 T7 阅读器 UI 应优先保证阅读舒适度，再将摘要、翻译、导出作为自然延伸。</p><p>当前原型已经预留 T10 Summary Agent 的结果卡片，以及重新生成、复制、清除等文章级操作。</p>",
+          failed: "摘要生成失败。UI 应展示失败原因，并允许用户重新生成。",
+          cancelled: "摘要任务已取消。用户可以重新生成，或继续阅读正文。"
+        };
+
+        summaryBody.innerHTML = content[nextState];
+      }
+
       document.querySelectorAll("[data-font]").forEach((button) => {
         button.addEventListener("click", () => {
           const value = button.dataset.font;
@@ -1537,7 +1748,50 @@
             export: "导出入口已预留：后续生成单篇 Markdown。",
             usage: "Usage 入口已预留：后续接 T9 用量统计面板。"
           };
+          if (button.dataset.action === "summary") {
+            setSummaryState("queued");
+          }
+          if (button.dataset.action === "usage") {
+            document.querySelector('[aria-label="Provider 配置入口"]')?.scrollIntoView({
+              block: "center"
+            });
+          }
           showToast(messages[button.dataset.action]);
+        });
+      });
+
+      document.querySelectorAll("[data-provider-action]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const messages = {
+            config: "Provider 配置面板入口已预留：base URL / API key / model。",
+            test: "连通测试入口已预留：后续由 T9 Provider 实现。",
+            switch: "模型切换入口已预留：支持多模型测试。"
+          };
+          setActiveButton("data-provider-action", button.dataset.providerAction);
+          showToast(messages[button.dataset.providerAction]);
+        });
+      });
+
+      document.querySelectorAll("[data-agent-state]").forEach((button) => {
+        button.addEventListener("click", () => {
+          setSummaryState(button.dataset.agentState);
+        });
+      });
+
+      document.querySelectorAll("[data-summary-action]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const action = button.dataset.summaryAction;
+          if (action === "regenerate") {
+            setSummaryState("queued");
+            showToast("摘要已重新加入队列。");
+          }
+          if (action === "copy") {
+            showToast(summaryState === "succeeded" ? "摘要内容已复制。" : "当前没有可复制的摘要结果。");
+          }
+          if (action === "clear") {
+            setSummaryState("idle");
+            showToast("摘要结果已清除。");
+          }
         });
       });
 

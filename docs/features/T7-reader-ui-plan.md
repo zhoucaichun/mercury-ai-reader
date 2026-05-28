@@ -74,7 +74,34 @@ MVP 阅读流程如下：
 
 在 T10 和 T11 尚未接入前，按钮可以是禁用状态或 mock 状态，但位置和命名应保持稳定。
 
-### 3.4 阅读设置
+### 3.4 Summary Agent 结果区
+
+T8 Agent Runtime 和 T10 Summary Agent 接入后，阅读页需要展示摘要任务的运行状态和结果。T7 原型中已预留摘要卡片，建议包含：
+
+- Runtime 状态：`idle` / `queued` / `running` / `succeeded` / `failed` / `cancelled`
+- 摘要结果正文
+- 重新生成按钮
+- 复制按钮
+- 清除按钮
+- 失败和取消时的可理解提示
+
+摘要卡片属于文章级 AI 结果，应靠近正文，但不能压过文章阅读本身。
+
+### 3.5 Provider 配置与 Usage 面板入口
+
+T9 LLM Providers / 模型配置 / 用量统计展示接入后，T7 需要保证阅读页能自然进入相关面板。原型中已预留 Provider 与 Usage 区域，建议包含：
+
+- 当前 Provider 类型，例如 OpenAI-compatible 或本地模型。
+- 当前模型名。
+- base URL / API key 是否已配置的状态提示。
+- 连通测试入口。
+- 切换模型入口，支持多模型测试。
+- Usage 统计摘要，例如调用次数、成功 / 失败、估算 token。
+- 最近调用明细，按 Summary / Translation / Provider / Model 展示。
+
+Usage 属于应用级统计，不应干扰正文阅读；入口可以保留在阅读器工具栏或右侧控制面板中。
+
+### 3.6 阅读设置
 
 MVP 阅读设置包括：
 
@@ -101,6 +128,7 @@ src/reader/
     ArticleListItem.tsx
     ReaderView.tsx
     ReaderToolbar.tsx
+    SummaryPanel.tsx
     ReadingSettingsPanel.tsx
     ReaderEmptyState.tsx
     ReaderErrorState.tsx
@@ -117,6 +145,7 @@ src/reader/
 | `ArticleListItem` | 渲染单个文章项 |
 | `ReaderView` | 渲染文章元信息、工具栏和清洗后正文 |
 | `ReaderToolbar` | 渲染摘要、翻译、导出、阅读设置等操作 |
+| `SummaryPanel` | 渲染 Summary Agent 状态、摘要结果、重新生成、复制、清除 |
 | `ReadingSettingsPanel` | 控制字号、行距、主题和阅读宽度 |
 | `ReaderEmptyState` | 展示空文章列表或空正文状态 |
 | `ReaderErrorState` | 展示加载失败或阅读器错误状态 |
@@ -144,9 +173,10 @@ export type ReaderArticle = {
 - T2 提供持久化文章和内容实体。
 - T5 提供同步后的文章记录。
 - T6 提供 cleaned HTML 和 canonical Markdown。
+- T8 提供 Agent Runtime 状态契约。
+- T9 提供 Provider 配置、Usage 面板入口和用量统计。
 - T10 提供摘要结果。
 - T11 提供翻译和 Markdown 导出。
-- T9 提供 Usage 面板入口和用量统计。
 
 ## 6. 视觉与交互规范
 

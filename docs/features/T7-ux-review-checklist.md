@@ -34,11 +34,16 @@
 ## 4. AI 与导出入口
 
 - [ ] Summary 摘要入口在阅读器中清楚可见。
+- [ ] 摘要卡片能展示 Runtime 状态：idle / queued / running / succeeded / failed / cancelled。
+- [ ] 摘要卡片包含重新生成、复制、清除操作。
 - [ ] Translation 翻译入口在阅读器中清楚可见。
 - [ ] Export Markdown 导出入口在阅读器中清楚可见。
 - [ ] 禁用或 mock 状态的按钮能说明当前状态。
 - [ ] AI 操作的命名和样式保持一致。
 - [ ] T9 提供 Usage 面板后，用量统计入口容易发现。
+- [ ] Provider 配置入口能清楚表达 base URL / API key / model 的配置状态。
+- [ ] Usage 面板能展示调用次数、成功 / 失败、token 估算和最近调用明细。
+- [ ] 多模型测试或模型切换入口不干扰正文阅读。
 
 ## 5. 状态与错误体验
 
@@ -78,5 +83,7 @@
 - [x] 已创建交互审查清单。
 - [x] 已在 `docs/features/T7-reader-ui-prototype.html` 实现静态 mock UI 原型。
 - [x] 静态原型已补充加载、空状态、列表错误、正文错误和正文为空状态演示。
+- [x] 静态原型已补充 Summary Agent 摘要卡片、Runtime 状态和重新生成 / 复制 / 清除操作。
+- [x] 静态原型已补充 Provider 配置、Usage 统计摘要和最近调用明细占位。
 - [ ] T1 项目骨架可用后，实现 React mock UI。
 - [ ] React UI 完成后补充截图。
