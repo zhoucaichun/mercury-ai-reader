@@ -46,6 +46,141 @@ Mercury，一个本地优先 AI 阅读器课程项目。
 
 技术栈说明：参考老师 Mercury 的本地优先、桌面端、Feed 解析、内容清洗、LLM Provider 和 AI Agent 设计思路，但不直接照搬 SwiftUI 技术栈。由于本项目要求支持 Windows / Linux / macOS，因此初步选择 Electron + React + TypeScript + SQLite。
 
+## 本地开发环境
+
+### 环境要求
+
+- Node.js 24 LTS 或更新的 24.x LTS 版本
+- npm 11 或更新版本
+- Git
+
+当前 T1 开发环境已在本机安装并验证：
+
+```bash
+node -v
+npm -v
+```
+
+本机验证版本：
+
+```text
+node v24.16.0
+npm 11.13.0
+```
+
+### 安装依赖
+
+```bash
+npm install
+```
+
+### 启动开发版桌面应用
+
+```bash
+npm run dev
+```
+
+该命令会同时启动 Vite renderer 和 Electron 桌面窗口。
+
+### 远程浏览器预览
+
+如果在服务器上启动项目、从本机浏览器访问，需要让 Vite 监听外部网卡：
+
+```bash
+npm run dev:renderer:lan
+```
+
+然后在本机浏览器打开：
+
+```text
+http://<服务器 IP>:5173/
+```
+
+例如：
+
+```text
+http://49.52.27.92:5173/
+```
+
+如果服务器公网端口没有转发到当前容器，或者普通 SSH tunnel 访问不到当前运行环境，可以使用临时反向 tunnel：
+
+```bash
+cloudflared tunnel --url http://127.0.0.1:5173 --no-autoupdate
+```
+
+命令会输出一个 `https://*.trycloudflare.com` 地址，在本机浏览器打开该地址即可预览。当前 Vite 配置已允许 `*.trycloudflare.com` 作为开发预览 Host。
+
+### 类型检查和构建
+
+```bash
+npm run typecheck
+npm run build
+```
+
+### 构建后本地启动
+
+```bash
+npm run start
+```
+
+## Windows / Linux / macOS 运行说明草案
+
+三平台的普通开发命令保持一致：
+
+```bash
+git clone <repo-url>
+cd mercury-ai-reader
+npm install
+npm run dev
+```
+
+注意事项：
+
+1. Windows 建议使用 PowerShell、Windows Terminal 或 Git Bash；
+2. macOS / Linux 使用系统终端即可；
+3. 不需要手动配置后端服务，T1 阶段使用 mock 数据；
+4. 不提交 `node_modules`、`.env`、API Key 或个人本地配置；
+5. 后续涉及文件路径时统一使用 Node.js `path` API 或 Electron 提供的跨平台路径能力，不写死 `C:\...`、`/Users/...`、`/home/...` 等个人绝对路径。
+
+## T1 工程骨架
+
+当前 T1 已完成 Electron + React + TypeScript + Vite 的基础工程骨架：
+
+```text
+electron/
+  main.ts             # Electron 主进程入口
+  preload.ts          # 安全暴露运行时信息
+src/
+  app/                # 应用入口和整体布局
+  core/               # 共享类型、mock 数据
+  features/
+    feed/             # T3 / T4 / T5 接入入口
+    reader/           # T6 / T7 接入入口
+    agent/            # T8 / T9 / T10 / T11 Agent 和 Provider 契约入口
+    usage/            # T9 LLM Usage 入口
+    export/           # T11 Markdown Export 入口
+  styles/             # 全局样式
+```
+
+T1 mock 页面目前提供：
+
+- 订阅源列表；
+- mock 文章列表；
+- mock 阅读器正文；
+- Summary / Translation / Usage / Export 入口；
+- mock Provider 和 mock usage event；
+- 单篇 Markdown mock 导出。
+
+### T9 目录对齐说明
+
+为避免和最终目录规划冲突，当前工程不创建 `src/features/llm/*`。
+
+T9 相关代码建议按职责放置：
+
+- Provider / Model 调用契约：`src/features/agent/`
+- LLM Usage 记录和统计展示：`src/features/usage/`
+- Summary / Translation 调用 Agent 和 Provider 契约，不单独创建平行的 `llm` 功能目录。
+
 ## 团队分工
 
 | 编号 | 模块                                     | 负责人                                      | 主要产出                                                                   |
@@ -127,7 +262,7 @@ Mercury，一个本地优先 AI 阅读器课程项目。
 ## 分支命名建议
 
 ```text
-feature/T1-feed-opml
+feature/T1-project-skeleton
 feature/T2-storage-sync
 feature/T3-reader-view
 feature/T4-cleaned-html
