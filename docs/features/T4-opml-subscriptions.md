@@ -304,3 +304,165 @@ deleteSubscription(id): Promise<void>
 - 数据链路说明
 
 后续将继续推进第 2 周的接口实现和联调工作。
+
+## 10. 根据 AGENTS.md 调整后的 Week 2 链路思路
+
+根据 AGENTS.md 5A 的 Week 2 Main Chain Contract，T4 在 Week 2 主链路中的核心职责不是直接同步文章，也不是直接实现阅读器 UI，而是为 T5 Sync 提供标准化订阅源输入。
+
+调整后的主链路理解如下：
+
+```text
+T4 OPML / subscriptions
+-> 输出 Week2Subscription[]
+-> T5 Sync 读取 active subscriptions
+-> T5 调用 T3 Feed Parser
+-> T5 调用 T2 Storage 保存 Feed / Article / ArticleContent
+-> T7 Reader 从数据层读取文章列表和内容
+```
+
+因此，T4 当前优先保证以下接口稳定：
+
+```ts
+export interface Week2SubscriptionProvider {
+  listActiveSubscriptions(): Promise<Week2Subscription[]>;
+}
+```
+
+导出位置按 AGENTS.md 要求放在：
+
+```text
+src/features/feed/subscriptions/index.ts
+```
+
+T5 后续只需要调用：
+
+```ts
+const provider = createWeek2SubscriptionProvider();
+const subscriptions = await provider.listActiveSubscriptions();
+```
+
+T4 输出的 `Week2Subscription` 字段对齐 AGENTS.md：
+
+```ts
+{
+  id: string;
+  title: string;
+  feedUrl: string;
+  siteUrl?: string;
+  groupName?: string;
+  source: 'manual' | 'opml' | 'mock';
+  status: 'active' | 'disabled' | 'error';
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+其中：
+
+- `source = "mock"` 表示 Week 2 默认联调用订阅源；
+- `source = "opml"` 表示从 OPML 文件解析出来的订阅源；
+- `status = "active"` 的订阅源会提供给 T5 同步；
+- `status = "disabled"` 或 `status = "error"` 的订阅源不进入默认同步输入。
+
+## 11. 第二周已完成的实现
+
+本次根据 AGENTS.md 的 Week 2 要求，已新增以下代码路径：
+
+```text
+src/features/feed/opml/index.ts
+src/features/feed/subscriptions/index.ts
+src/features/feed/subscriptions/types.ts
+src/features/feed/subscriptions/mockSubscriptions.ts
+```
+
+实现内容包括：
+
+1. OPML 解析
+   - 新增 `parseOpmlText(opmlText)`；
+   - 遍历 OPML 中的 `<outline>` 节点；
+   - 将 `xmlUrl` 映射为 `feedUrl`；
+   - 将 `htmlUrl` 映射为 `siteUrl`；
+   - 将外层分组映射为 `groupName`；
+   - 输出合法订阅源和问题列表。
+
+2. URL 校验和标准化
+   - 新增 `normalizeFeedUrl()`；
+   - 去掉首尾空格；
+   - 仅接受 `http` / `https`；
+   - 无协议时补 `https://`；
+   - 使用标准 `URL` API 校验；
+   - 移除 hash；
+   - 非法 URL 返回 `null`。
+
+3. 去重和错误处理
+   - 按标准化后的 `feedUrl` 去重；
+   - 重复订阅源记录为 `duplicate`；
+   - 非法 URL 记录为 `invalid-url`；
+   - 缺少 `xmlUrl` 记录为 `missing-feed-url`；
+   - 单条错误不影响其他订阅源导入。
+
+4. 订阅源管理
+   - 新增 `Week2Subscription` 类型；
+   - 新增 `Week2SubscriptionProvider` 类型；
+   - 新增 `InMemorySubscriptionStore`；
+   - 支持 `listActiveSubscriptions()`；
+   - 支持 `listSubscriptions()`；
+   - 支持 `importOpmlText()`；
+   - 支持 `addManualSubscription()`；
+   - 支持 `enableSubscription()` / `disableSubscription()`；
+   - 支持 `deleteSubscription()`。
+
+5. Week 2 默认联调数据
+   - 新增 `mockActiveSubscriptions`；
+   - 至少包含 1 个真实可访问 Feed URL：
+
+```text
+https://feeds.bbci.co.uk/news/rss.xml
+```
+
+这样即使完整 OPML 导入 UI 还没接入，T5 也可以先通过 `listActiveSubscriptions()` 拿到订阅源输入，继续测试 `syncAll()`。
+
+## 12. 第二周工作说明
+
+第二周的目标是把第一周的设计草案推进到主链路可调用状态。T4 需要先让 T5 能拿到订阅源输入，所以本次实现优先完成两个层次：OPML 解析层和订阅源 provider 层。
+
+OPML 解析层负责把用户导入的 OPML 文本转换为统一结构。它只关心订阅源本身，不负责同步文章。解析完成后，合法的 `outline` 会变成 `Week2Subscription`，重复或无效的条目会被跳过并记录原因。
+
+订阅源 provider 层负责对外提供稳定接口。T5 不需要关心订阅源来自哪里，只需要调用 `listActiveSubscriptions()`。当前有两种来源：
+
+- 默认来源：`mockActiveSubscriptions`，用于 Week 2 主链路兜底联调；
+- OPML 来源：通过 `importOpmlText(opmlText)` 导入后生成，`source = "opml"`。
+
+这两种来源最终都会整理成同一种 `Week2Subscription[]`。这样 T5 的调用方式保持一致，后续从 mock 切换到真实 OPML 导入时，不需要 T5 改接口。
+
+当前 T4 和 T5 的边界是：
+
+```text
+T4 负责：订阅源导入、校验、去重、输出 active subscriptions
+T5 负责：读取 active subscriptions、调用 T3 解析 Feed、调用 T2 保存 Feed 和 Article
+```
+
+当前 T4 和 T2 的关系是间接关系。T4 暂时不直接写 T2 数据库，而是先提供 `Week2Subscription[]`。T5 可以把 `Week2Subscription` 映射为 `Week2Feed` 后交给 T2 保存。后续如果 T2 提供订阅源持久化接口，T4 再把内部的 `InMemorySubscriptionStore` 替换为 T2-backed store。
+
+也就是说，本次实现的重点不是一次性完成最终数据库方案，而是先固定 T4 对 T5 的公共接口，保证 Week 2 主链路可以继续向前联调。
+
+## 13. 当前限制和后续计划
+
+当前实现是 Week 2 可联调版本，重点是保证 T5 有稳定输入。
+
+当前限制：
+
+- 订阅源暂存在 `InMemorySubscriptionStore` 内存数组中，应用重启后不会持久化；
+- 尚未接入 Electron 文件选择器或 UI 导入入口；
+- 尚未接入 T2 SQLite 订阅源持久化；
+- 尚未与 T5 的 `syncAll()` 做真实跨模块联调；
+- 尚未与 T7 的订阅源列表 UI 联调。
+
+后续计划：
+
+1. 与 T5 联调 `syncAll()`，确认 T5 能读取 T4 的 active subscriptions；
+2. 与 T2 确认是否需要独立 subscriptions 表或订阅源存储接口；
+3. 如果 T2 提供订阅源持久化接口，将当前内存 store 替换或扩展为 T2-backed store；
+4. 与 T7 对齐订阅源列表展示字段和操作入口；
+5. 增加真实 `.opml` 示例文件或 UI 导入入口；
+6. 根据联调结果继续修正 URL 标准化、错误提示和状态回写规则。
