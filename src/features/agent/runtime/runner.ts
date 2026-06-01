@@ -1,0 +1,225 @@
+import type {
+  AgentRunInput,
+  AgentRunResult,
+  AgentRuntime,
+  LLMChatProvider,
+  LLMChatRequest,
+  LLMChatResponse,
+  PromptTemplate,
+  PromptTemplateMessage,
+  RuntimeLLMResult,
+} from "./types";
+
+export interface CreateMockAgentRuntimeOptions {
+  provider?: LLMChatProvider;
+  getTemplate?: (templateId: string) => Promise<PromptTemplate>;
+}
+
+export function createMockAgentRuntime(
+  options: CreateMockAgentRuntimeOptions = {},
+): AgentRuntime {
+  const provider = options.provider ?? createMockChatProvider();
+  const getTemplate = options.getTemplate ?? getDefaultTemplate;
+
+  return {
+    async runAgent<TInput, TOutput = RuntimeLLMResult>(
+      input: AgentRunInput<TInput>,
+    ): Promise<AgentRunResult<TOutput>> {
+      if (input.signal?.aborted) {
+        return {
+          taskId: input.taskId,
+          status: "cancelled",
+          errorCode: "cancelled",
+          errorMessage: "Agent task was cancelled before execution.",
+        };
+      }
+
+      try {
+        const template = await getTemplate(input.templateId);
+        const messages = renderMessages(template, input.input);
+        const request: LLMChatRequest = {
+          purpose: input.agentType,
+          messages,
+          model: input.model,
+          metadata: toProviderMetadata(input.metadata),
+          signal: input.signal,
+        };
+
+        const response = await provider.chat(request);
+        const output = toRuntimeResult(response) as TOutput;
+
+        return {
+          taskId: input.taskId,
+          status: "succeeded",
+          output,
+        };
+      } catch (error) {
+        if (input.signal?.aborted) {
+          return {
+            taskId: input.taskId,
+            status: "cancelled",
+            errorCode: "cancelled",
+            errorMessage: "Agent task was cancelled during execution.",
+          };
+        }
+
+        return {
+          taskId: input.taskId,
+          status: "failed",
+          errorCode: "provider_error",
+          errorMessage: normalizeErrorMessage(error),
+        };
+      }
+    },
+  };
+}
+
+export function createMockChatProvider(): LLMChatProvider {
+  return {
+    async chat(request: LLMChatRequest): Promise<LLMChatResponse> {
+      const startedAt = Date.now();
+
+      if (request.signal?.aborted) {
+        throw new Error("Request aborted.");
+      }
+
+      const combinedPrompt = request.messages.map((message) => message.content).join("\n\n");
+      const outputText = buildMockOutput(request.purpose, combinedPrompt);
+      const promptTokens = estimateTokens(combinedPrompt);
+      const completionTokens = estimateTokens(outputText);
+
+      return {
+        id: `mock-${Date.now()}`,
+        providerId: "mock-provider",
+        providerName: "Mock Provider",
+        model: request.model ?? "mock-model",
+        content: outputText,
+        usage: {
+          promptTokens,
+          completionTokens,
+          totalTokens: promptTokens + completionTokens,
+          estimated: true,
+        },
+        status: "succeeded",
+        latencyMs: Date.now() - startedAt,
+        raw: {
+          mock: true,
+          purpose: request.purpose,
+        },
+      };
+    },
+  };
+}
+
+function renderMessages<TInput>(
+  template: PromptTemplate,
+  input: TInput,
+): PromptTemplateMessage[] {
+  return [
+    {
+      role: "system",
+      content: renderTemplateString(template.system, input),
+    },
+    {
+      role: "user",
+      content: renderTemplateString(template.user, input),
+    },
+  ];
+}
+
+function renderTemplateString<TInput>(template: string, input: TInput): string {
+  return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key: string) => {
+    const value = (input as Record<string, unknown>)[key];
+    return value == null ? "" : String(value);
+  });
+}
+
+function toRuntimeResult(response: LLMChatResponse): RuntimeLLMResult {
+  return {
+    text: response.content,
+    providerId: response.providerId,
+    providerName: response.providerName,
+    model: response.model,
+    usage: response.usage,
+    raw: response.raw,
+  };
+}
+
+async function getDefaultTemplate(templateId: string): Promise<PromptTemplate> {
+  if (templateId === "translation.default") {
+    return {
+      id: "translation.default",
+      agentType: "translation",
+      system: "You are a professional translator. Preserve Markdown structure.",
+      user: "Translate the following article:\n\n{{canonicalMarkdown}}",
+    };
+  }
+
+  return {
+    id: "summary.default",
+    agentType: "summary",
+    system: "You are a helpful article summarizer. Output Markdown only.",
+    user: "Summarize the following article:\n\n{{canonicalMarkdown}}",
+  };
+}
+
+function buildMockOutput(
+  purpose: LLMChatRequest["purpose"],
+  combinedPrompt: string,
+): string {
+  const clipped = combinedPrompt.replace(/\s+/g, " ").trim().slice(0, 240);
+
+  if (purpose === "translation") {
+    return [
+      "## Mock Translation",
+      "",
+      clipped || "No content provided.",
+      "",
+      "_Generated by the T8 mock runtime._",
+    ].join("\n");
+  }
+
+  return [
+    "## Mock Summary",
+    "",
+    clipped || "No content provided.",
+    "",
+    "- Generated by shared runtime",
+    "- Uses provider.chat() contract",
+  ].join("\n");
+}
+
+function toProviderMetadata(
+  metadata: Record<string, unknown> | undefined,
+): Record<string, string | number | boolean | null> | undefined {
+  if (!metadata) {
+    return undefined;
+  }
+
+  const result: Record<string, string | number | boolean | null> = {};
+
+  for (const [key, value] of Object.entries(metadata)) {
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean" ||
+      value === null
+    ) {
+      result[key] = value;
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+function estimateTokens(text: string): number {
+  return Math.max(1, Math.ceil(text.length / 4));
+}
+
+function normalizeErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
+}
