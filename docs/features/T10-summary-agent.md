@@ -495,7 +495,7 @@ T10 本周不作为主链路阻塞项，但需要完成以下对齐：
 - 是否说明与 T9 Provider 的对接方式；
 - 是否说明 usage record / usage event 生成方式；
 - 是否使用 `provider.chat()` 和 `response.content`；
-- 是否使用 `estimated` 而不是 `isEstimated`；
+- 是否使用 `estimated` 字段；
 - 是否把 `cancelled` 从 `LLMUsageEvent.status` 中移除；
 - 是否提供 Mock 摘要样例和简易摘要区域原型；
 - 是否说明对 T2 / T6 / T7 / T8 / T9 的依赖。
