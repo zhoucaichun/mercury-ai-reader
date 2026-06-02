@@ -8,8 +8,8 @@
 | --- | --- |
 | 审查人 | T7 - 余婧 |
 | 模块 | 阅读器 UI / 内容呈现 / 阅读样式 |
-| 审查日期 | 2026-05-28 |
-| 项目周次 | 第 1 周 |
+| 审查日期 | 2026-06-02 |
+| 项目周次 | 第 2 周 |
 | 构建 / 分支 | main 或集成分支 |
 
 ## 2. 阅读流程
@@ -70,6 +70,7 @@
 | 日期 | 区域 | 问题 | 严重程度 | 负责人 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | 2026-05-28 | 阅读器 UI | 项目还没有 React UI 骨架，因此 T7 当前先准备 mock 设计、静态原型和交互审查清单。 | 中 | T1 / T7 | 未关闭 |
+| 2026-06-02 | 阅读器 UI | React 阅读器已通过 Week2ReaderDataPort mock adapter 展示 Feed、文章列表和非空 ArticleContent；后续等待 T2/T5 真实存储端口替换。 | 低 | T7 / T2 / T5 | 跟进中 |
 
 严重程度说明：
 
@@ -85,5 +86,14 @@
 - [x] 静态原型已补充加载、空状态、列表错误、正文错误和正文为空状态演示。
 - [x] 静态原型已补充 Summary Agent 摘要卡片、Runtime 状态和重新生成 / 复制 / 清除操作。
 - [x] 静态原型已补充 Provider 配置、Usage 统计摘要和最近调用明细占位。
-- [ ] T1 项目骨架可用后，实现 React mock UI。
+- [x] T1 项目骨架可用后，实现 React mock UI。
 - [ ] React UI 完成后补充截图。
+
+## 9. 第 2 周 T7 交付物
+
+- [x] `src/features/reader/index.ts` 导出符合 Week2ReaderDataPort 的 mock adapter。
+- [x] React 页面通过 `listFeeds / listArticles / getArticleContent` 展示文章列表和阅读页。
+- [x] 点击文章后读取非空 `sourceHtml / cleanedHtml / canonicalMarkdown` 对应内容。
+- [x] 阅读页展示文章标题、来源、发布时间、原文入口和 cleaned HTML 正文。
+- [x] 阅读设置支持字号和行距。
+- [x] Summary / Translation / Export / Usage 入口保留，Agent 状态展示对齐 `idle / queued / running / succeeded / failed / cancelled`。

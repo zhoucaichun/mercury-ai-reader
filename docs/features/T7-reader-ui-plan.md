@@ -17,6 +17,11 @@ T7 负责 Mercury 的阅读体验相关工作：
 
 - [T7 阅读器 UI 原型](T7-reader-ui-prototype.html)
 
+Week 2 React 实现已经迁移到 `src/features/reader/` 读取入口，并通过
+`Week2ReaderDataPort` 获取 `listFeeds / listArticles / getArticleContent`。在
+T2 / T5 的真实存储和同步实现合并前，T7 使用同接口 mock adapter；后续替换
+adapter 时不改变阅读器 UI 的组件边界。
+
 ## 2. 用户流程
 
 MVP 阅读流程如下：
@@ -119,10 +124,11 @@ T7 最低验收要求至少支持两个阅读设置。建议优先实现：
 
 ## 4. 组件拆分方案
 
-T1 提供 React 项目骨架后，建议使用以下目录结构：
+T1 提供 React 项目骨架后，T7 React 代码统一放在 `src/features/reader/`：
 
 ```text
-src/reader/
+src/features/reader/
+  index.ts
   components/
     ArticleList.tsx
     ArticleListItem.tsx
@@ -132,10 +138,12 @@ src/reader/
     ReadingSettingsPanel.tsx
     ReaderEmptyState.tsx
     ReaderErrorState.tsx
-  mockArticles.ts
-  types.ts
-  settings.ts
 ```
+
+当前 Week 2 最小实现先由 `src/features/reader/index.ts` 导出
+`mockWeek2ReaderDataPort`，`src/app/App.tsx` 通过该端口展示 Feed、Article 和
+ArticleContent。后续如果继续拆组件，应继续保留在 `src/features/reader/`
+目录下。
 
 建议组件职责：
 
@@ -150,22 +158,16 @@ src/reader/
 | `ReaderEmptyState` | 展示空文章列表或空正文状态 |
 | `ReaderErrorState` | 展示加载失败或阅读器错误状态 |
 
-## 5. Mock 数据契约
+## 5. Week 2 数据契约
 
-T7 可以先从以下 mock 数据结构开始：
+T7 使用 AGENTS.md 中的 Week 2 主链路契约：
 
 ```ts
-export type ReaderArticle = {
-  id: string;
-  title: string;
-  sourceName: string;
-  url: string;
-  publishedAt: string;
-  excerpt: string;
-  cleanedHtml: string;
-  canonicalMarkdown: string;
-  isRead: boolean;
-};
+export interface Week2ReaderDataPort {
+  listFeeds(): Promise<Week2Feed[]>;
+  listArticles(query?: { feedId?: string; searchText?: string }): Promise<Week2Article[]>;
+  getArticleContent(articleId: string): Promise<Week2ArticleContent | null>;
+}
 ```
 
 后续集成关系：
