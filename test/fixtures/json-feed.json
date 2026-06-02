@@ -1,0 +1,26 @@
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "Mercury Test JSON Feed",
+  "home_page_url": "https://json.example.com/",
+  "feed_url": "https://json.example.com/feed.json",
+  "description": "JSON Feed fixture for Mercury feed parsing.",
+  "language": "en",
+  "items": [
+    {
+      "id": "json-1",
+      "url": "https://json.example.com/posts/one",
+      "title": "First JSON article",
+      "content_html": "<p>Full JSON content.</p>",
+      "summary": "JSON summary.",
+      "date_published": "2024-05-22T09:00:00Z",
+      "authors": [{ "name": "Katherine Johnson" }],
+      "tags": ["json", "feed"]
+    },
+    {
+      "id": "json-2",
+      "external_url": "https://external.example.com/posts/two",
+      "content_text": "JSON item without title.",
+      "date_modified": "2024-05-23T09:00:00Z"
+    }
+  ]
+}
