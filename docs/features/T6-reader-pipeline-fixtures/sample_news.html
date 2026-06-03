@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rust Takes Over Linux Kernel: What It Means for Open Source</title>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+    <script src="/js/tracking.js"></script>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="logo">TechNews Daily</div>
+        <nav class="main-nav">
+            <a href="/">Home</a>
+            <a href="/news">News</a>
+            <a href="/reviews">Reviews</a>
+            <a href="/opinion">Opinion</a>
+        </nav>
+        <div class="header-ad">
+            <img src="//example.com/ads/header-banner.gif" width="728" height="90">
+        </div>
+    </header>
+
+    <div class="container">
+        <main id="content">
+            <article class="article-full">
+                <h1 class="headline">Rust Takes Over Linux Kernel: What It Means for Open Source</h1>
+                <div class="byline">
+                    By <a href="/author/janedoe">Jane Doe</a> —
+                    <time datetime="2025-05-12">May 12, 2025</time>
+                </div>
+
+                <div class="article-content">
+                    <p class="lead"><strong>In a historic shift, the Linux kernel has officially merged its first major Rust-based driver subsystem, marking a new era for systems programming.</strong></p>
+
+                    <p>The Linux kernel, long written exclusively in C, began accepting Rust patches in late 2022. Now, three years later, the <a href="https://lwn.net/Articles/rust-kernel-2025/">Rust-for-Linux</a> project has reached a major milestone: the DRM (Direct Rendering Manager) subsystem now ships with a Rust-based GPU driver for Intel Arc GPUs.</p>
+
+                    <h2>Why Rust in the Kernel?</h2>
+                    <p>Linus Torvalds, Linux's creator, has long expressed cautious optimism about Rust. The key advantages are clear:</p>
+                    <ul>
+                        <li><strong>Memory safety without garbage collection</strong> — Rust's borrow checker eliminates use-after-free, double-free, and buffer overflow bugs at compile time</li>
+                        <li><strong>Zero-cost abstractions</strong> — Rust's generics and traits compile down to the same machine code as hand-written C</li>
+                        <li><strong>Modern tooling</strong> — cargo, rustfmt, clippy, and rust-analyzer provide a developer experience decades ahead of C</li>
+                    </ul>
+
+                    <figure>
+                        <img src="https://example.com/images/rust-kernel-stats.png" alt="Chart showing decreasing memory bugs in Linux since Rust introduction">
+                        <figcaption>Memory-related CVEs in Linux have dropped 41% since Rust code was first merged (Source: Linux Foundation, 2025)</figcaption>
+                    </figure>
+
+                    <h2>The Numbers Don't Lie</h2>
+                    <p>According to a <a href="https://lwn.net/Articles/954328/">Google security report</a>, approximately 70% of serious security vulnerabilities in large C/C++ codebases stem from memory safety issues. Rust eliminates this entire class of bugs by design.</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>C (Legacy)</th>
+                                <th>Rust (New)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Memory CVEs (per 100K LOC)</td>
+                                <td>3.2</td>
+                                <td>0.0</td>
+                            </tr>
+                            <tr>
+                                <td>Compile-time errors caught</td>
+                                <td>~30%</td>
+                                <td>~95%</td>
+                            </tr>
+                            <tr>
+                                <td>Lines of code for same functionality</td>
+                                <td>2,400</td>
+                                <td>1,800</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h2>Challenges Ahead</h2>
+                    <p>The transition isn't without friction. Kernel maintainers who spent decades mastering C must now review Rust code. The Rust-for-Linux team has responded with:</p>
+                    <ol>
+                        <li>Comprehensive documentation targeted at C programmers learning Rust</li>
+                        <li>A "Rust reviewer" mentorship program pairing new Rust contributors with experienced kernel developers</li>
+                        <li>Incremental adoption: new drivers in Rust, existing code stays in C</li>
+                    </ol>
+
+                    <blockquote>
+                        <p>"Rust is not replacing C. It's complementing it. The kernel will be a mixed codebase for decades, and that's fine — the goal is fewer bugs, not ideological purity."</p>
+                        <cite>— Greg Kroah-Hartman, Linux Foundation Fellow</cite>
+                    </blockquote>
+
+                    <h2>What This Means for Developers</h2>
+                    <p>If you're a systems programmer, learning Rust is no longer optional — it's a career investment. The kernel's adoption signals that Rust has moved from "interesting experiment" to "production-critical infrastructure."</p>
+                    <p>For open source maintainers, the lesson is broader: <em>language adoption follows demonstrated value, not hype</em>. Rust earned its place in the kernel through years of consistent, incremental contributions that proved its safety guarantees were real.</p>
+
+                    <pre><code class="language-rust">// Example: A minimal Rust kernel module
+use kernel::prelude::*;
+
+module! {
+    type: RustHello,
+    name: "rust_hello",
+    author: "Jane Doe",
+    description: "A simple Rust kernel module",
+    license: "GPL",
+}
+
+struct RustHello;
+
+impl kernel::Module for RustHello {
+    fn init(_module: &'static ThisModule) -> Result&lt;Self&gt; {
+        pr_info!("Hello from Rust in the Linux kernel!\n");
+        Ok(RustHello)
+    }
+}</code></pre>
+
+                    <p>The future of systems programming is multilingual. And Rust is leading that charge.</p>
+                </div>
+
+                <div class="article-tags">
+                    <a href="/tag/rust">Rust</a>
+                    <a href="/tag/linux">Linux</a>
+                    <a href="/tag/open-source">Open Source</a>
+                </div>
+            </article>
+
+            <section class="newsletter-signup">
+                <h3>Subscribe to our newsletter</h3>
+                <p>Get the latest tech news delivered to your inbox.</p>
+                <input type="email" placeholder="your@email.com">
+                <button>Subscribe</button>
+            </section>
+
+            <div class="disqus-comments" id="disqus_thread">
+                <script>
+                    var disqus_config = function () {
+                        this.page.url = 'https://example.com/article/123';
+                        this.page.identifier = '123';
+                    };
+                    (function() {
+                        var d = document, s = d.createElement('script');
+                        s.src = 'https://example.disqus.com/embed.js';
+                        s.setAttribute('data-timestamp', +new Date());
+                        (d.head || d.body).appendChild(s);
+                    })();
+                </script>
+            </div>
+        </main>
+
+        <aside class="sidebar-right">
+            <div class="widget popular-posts">
+                <h4>Most Read</h4>
+                <ol>
+                    <li><a href="/post/10">AI Regulation Bill Passes Senate</a></li>
+                    <li><a href="/post/9">Why PostgreSQL Is Eating the Database World</a></li>
+                    <li><a href="/post/8">The Rise of WebAssembly in Production</a></li>
+                </ol>
+            </div>
+            <div class="widget ad-unit">
+                <div id="ad-banner-300x250">
+                    <img src="//example.com/ads/sidebar.jpg" width="300" height="250">
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-links">
+            <a href="/about">About</a>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Service</a>
+        </div>
+        <p>&copy; 2025 TechNews Daily. All rights reserved.</p>
+    </footer>
+
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXX');
+    </script>
+    <script type="text/javascript">
+        _linkedin_partner_id = "123456";
+        window._linkedin_data_partner_ids = window._linkedin_data_partner_ids || [];
+        window._linkedin_data_partner_ids.push(_linkedin_partner_id);
+    </script>
+    <noscript>
+        <img height="1" width="1" style="display:none;" alt="" src="https://px.ads.linkedin.com/collect/?pid=123456&fmt=gif">
+    </noscript>
+</body>
+</html>
