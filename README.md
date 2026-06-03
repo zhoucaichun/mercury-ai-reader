@@ -123,6 +123,15 @@ npm run build
 npm run start
 ```
 
+### T3 Feed 解析验证
+
+T3 Feed 解析模块位于 `src/features/feed/parser`，功能说明见 `docs/features/T3-feed-parser.md`。
+
+```bash
+npm test
+npm run smoke:feed
+```
+
 ## Windows / Linux / macOS 运行说明草案
 
 三平台的普通开发命令保持一致：

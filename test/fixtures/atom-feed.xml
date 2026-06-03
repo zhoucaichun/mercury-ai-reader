@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Mercury Test Atom</title>
+  <subtitle>Atom fixture for Mercury feed parsing.</subtitle>
+  <link href="https://example.org/"/>
+  <link rel="self" href="https://example.org/feed.atom"/>
+  <updated>2024-05-21T12:00:00Z</updated>
+  <id>https://example.org/feed.atom</id>
+  <entry>
+    <title>First Atom article</title>
+    <link href="https://example.org/posts/first"/>
+    <id>tag:example.org,2024:first</id>
+    <updated>2024-05-21T11:00:00Z</updated>
+    <published>2024-05-21T10:30:00Z</published>
+    <author>
+      <name>Grace Hopper</name>
+    </author>
+    <summary>Short Atom summary.</summary>
+    <content type="html">&lt;p&gt;Full Atom content.&lt;/p&gt;</content>
+    <category term="reading"/>
+  </entry>
+  <entry>
+    <title>Atom item with relative link</title>
+    <link href="/posts/relative"/>
+    <id>tag:example.org,2024:relative</id>
+    <updated>2024-05-22T08:00:00Z</updated>
+    <summary>Relative link should be resolved against the feed site.</summary>
+  </entry>
+</feed>
