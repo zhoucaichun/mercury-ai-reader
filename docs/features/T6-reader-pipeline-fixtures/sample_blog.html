@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Python 异步编程：从回调到 async/await — 技术博客</title>
+    <meta name="description" content="深入理解 Python 异步编程的演进历程">
+    <link rel="stylesheet" href="/css/main.css">
+    <script src="/js/analytics.js"></script>
+    <script src="/js/ads.js"></script>
+</head>
+<body>
+    <!-- 导航栏噪声 -->
+    <nav id="navbar">
+        <ul>
+            <li><a href="/">首页</a></li>
+            <li><a href="/archive">归档</a></li>
+            <li><a href="/about">关于</a></li>
+        </ul>
+    </nav>
+
+    <!-- 侧边栏噪声 -->
+    <aside class="sidebar">
+        <div class="widget">
+            <h3>热门文章</h3>
+            <ul>
+                <li><a href="/post/1">Django vs Flask 对比</a></li>
+                <li><a href="/post/2">Git 高级技巧</a></li>
+            </ul>
+        </div>
+        <div class="advertisement">
+            <img src="https://example.com/ads/banner.jpg" alt="广告">
+            <p>限时优惠，Python 课程 5 折！</p>
+        </div>
+    </aside>
+
+    <!-- 正文区域 -->
+    <article class="post-content">
+        <header>
+            <h1>Python 异步编程：从回调到 async/await</h1>
+            <div class="post-meta">
+                <span class="author">张三</span>
+                <time datetime="2025-05-10">2025年5月10日</time>
+                <span class="tags">
+                    <a href="/tag/python">Python</a>
+                    <a href="/tag/async">异步</a>
+                </span>
+            </div>
+        </header>
+
+        <div class="post-body">
+            <h2>1. 为什么需要异步编程？</h2>
+            <p>在传统的同步编程模型中，当一个 I/O 操作（如网络请求、文件读写）发生时，程序会阻塞等待直到操作完成。这在处理大量并发请求时效率极低。</p>
+            <p>考虑这样一个场景：一个 Web 服务器需要同时处理 1000 个客户端连接。如果每个请求都需要 100ms 的数据库查询时间，同步方式下需要 100 秒才能全部完成——这显然无法接受。</p>
+            <blockquote>
+                <p>"异步编程不是让单个操作变快，而是让等待时间不再被浪费。" —— 引自 Python 官方文档</p>
+            </blockquote>
+
+            <h2>2. 从回调地狱开始</h2>
+            <p>最早的异步编程使用回调函数（Callback）。当一个异步操作完成时，调用预先注册的回调函数来处理结果。</p>
+<pre><code class="language-python">import asyncio
+
+def fetch_data(url, callback):
+    # 模拟异步请求
+    def on_response(response):
+        data = response.json()
+        callback(data)
+    return on_response
+
+# 嵌套回调 —— "回调地狱"
+fetch_data("/api/user", lambda user:
+    fetch_data(f"/api/posts/{user['id']}", lambda posts:
+        fetch_data(f"/api/comments/{posts[0]['id']}", lambda comments:
+            print(f"第一条评论: {comments[0]}")
+        )
+    )
+)</code></pre>
+            <p>这种方式很快就会陷入"回调地狱"：代码层层嵌套，错误处理困难，流程控制复杂。当业务逻辑稍复杂时，代码可读性急剧下降。</p>
+
+            <h2>3. Future 和 Promise：让异步"可组合"</h2>
+            <p>第二代方案引入了 <code>Future</code> 对象（在 JavaScript 中称为 <code>Promise</code>）。Future 代表一个"尚未完成的计算"，它提供了链式调用的能力，显著改善了代码结构。</p>
+            <p>Python 的 <strong>concurrent.futures</strong> 模块提供了基础的 Future 实现，但真正的异步飞跃来自 <strong>asyncio</strong>。</p>
+
+            <h2>4. async/await：异步编程的语法革命</h2>
+            <p>Python 3.5 引入了 <code>async</code> 和 <code>await</code> 关键字，让异步代码读起来像同步代码。这是 Python 异步编程的分水岭。</p>
+
+            <h3>4.1 核心概念</h3>
+            <ul>
+                <li><strong>协程（Coroutine）</strong>：用 <code>async def</code> 定义的函数，可以在执行中暂停和恢复</li>
+                <li><strong>事件循环（Event Loop）</strong>：调度和执行所有协程的引擎</li>
+                <li><strong>可等待对象（Awaitable）</strong>：可以被 <code>await</code> 的对象（协程、Task、Future）</li>
+            </ul>
+
+            <h3>4.2 实际示例：并发 HTTP 请求</h3>
+<pre><code class="language-python">import asyncio
+import aiohttp
+
+async def fetch_url(session, url):
+    async with session.get(url) as response:
+        return await response.text()
+
+async def fetch_all(urls):
+    async with aiohttp.ClientSession() as session:
+        tasks = [fetch_url(session, url) for url in urls]
+        return await asyncio.gather(*tasks)
+
+# 使用
+urls = [
+    "https://api.example.com/data/1",
+    "https://api.example.com/data/2",
+    "https://api.example.com/data/3",
+]
+results = asyncio.run(fetch_all(urls))
+print(f"并发获取了 {len(results)} 个结果")</code></pre>
+
+            <p>以上代码并发发起三个 HTTP 请求，总耗时约等于最慢的那个请求，而非三者之和。</p>
+
+            <h2>5. 实际性能对比</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>方案</th>
+                        <th>100 个请求耗时</th>
+                        <th>CPU 占用</th>
+                        <th>代码复杂度</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>同步 + 多线程</td>
+                        <td>12.3 秒</td>
+                        <td>高</td>
+                        <td>中（需处理锁）</td>
+                    </tr>
+                    <tr>
+                        <td>回调式异步</td>
+                        <td>3.1 秒</td>
+                        <td>低</td>
+                        <td>高（回调地狱）</td>
+                    </tr>
+                    <tr>
+                        <td>async/await</td>
+                        <td>2.8 秒</td>
+                        <td>极低</td>
+                        <td>低（像同步代码）</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>6. 常见陷阱与最佳实践</h2>
+            <ol>
+                <li>
+                    <strong>不要在协程中调用阻塞函数</strong>
+                    <p>阻塞函数（如 <code>time.sleep()</code>）会卡住整个事件循环。请使用 <code>await asyncio.sleep()</code> 或在线程池中执行。</p>
+                </li>
+                <li>
+                    <strong>避免创建过多协程</strong>
+                    <p>虽然协程很轻量（KB 级别内存），但上万个协程同时运行仍可能带来调度开销。使用 <code>asyncio.Semaphore</code> 限制并发数。</p>
+                </li>
+                <li>
+                    <strong>正确处理异常</strong>
+                    <p><code>asyncio.gather()</code> 默认会在第一个异常处停止。使用 <code>return_exceptions=True</code> 可以让所有协程执行完毕后再统一处理异常。</p>
+                </li>
+            </ol>
+
+            <figure>
+                <img src="https://example.com/images/async-flow.png" alt="Python 异步事件循环流程图">
+                <figcaption>图1: Python asyncio 事件循环的工作流程</figcaption>
+            </figure>
+
+            <h2>7. 总结</h2>
+            <p>Python 异步编程从回调、到 Future、再到 async/await，经历了十多年的演进。如今的 <code>asyncio</code> 生态已经非常成熟，是构建高性能 I/O 密集型应用的首选方案。</p>
+            <p>核心要点：</p>
+            <ul>
+                <li>async/await 让异步代码"看起来同步"</li>
+                <li>事件循环是异步的心脏，不要阻塞它</li>
+                <li><a href="https://docs.python.org/3/library/asyncio.html">asyncio 官方文档</a>是最好的学习资源</li>
+            </ul>
+        </div>
+
+        <!-- 分享按钮 → 噪声 -->
+        <div class="social-share">
+            <button>分享到微博</button>
+            <button>分享到微信</button>
+            <button>分享到 Twitter</button>
+        </div>
+
+        <!-- 评论区 → 噪声 -->
+        <section id="comments" class="comments">
+            <h3>评论 (5)</h3>
+            <div class="comment">
+                <p class="comment-author">李四</p>
+                <p class="comment-body">写得太好了，终于理解了 async/await！</p>
+            </div>
+            <div class="comment">
+                <p class="comment-author">王五</p>
+                <p class="comment-body">能再讲讲 asyncio.Queue 的用法吗？</p>
+            </div>
+        </section>
+
+        <!-- 相关推荐 → 噪声 -->
+        <div class="related-posts">
+            <h3>相关文章</h3>
+            <ul>
+                <li><a href="/post/5">Python 协程深入理解</a></li>
+                <li><a href="/post/6">aiohttp 实战指南</a></li>
+            </ul>
+        </div>
+    </article>
+
+    <!-- 页脚噪声 -->
+    <footer>
+        <p>&copy; 2025 技术博客. Powered by WordPress.</p>
+    </footer>
+
+    <script>
+        // 追踪脚本 → 应在清洗中移除
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+        ga('create', 'UA-XXXXX-Y', 'auto');
+        ga('send', 'pageview');
+    </script>
+</body>
+</html>
