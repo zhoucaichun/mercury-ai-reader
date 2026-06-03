@@ -1,16 +1,18 @@
 import type {
-  LLMCallStatus,
   LLMChatRequest,
   LLMChatResponse,
   LLMProvider,
   LLMProviderConfig,
+  LLMUsageInfo,
+  LLMPurpose,
+} from "../agent/providers/types";
+import { estimateTokensFromMessages } from "../agent/providers/tokenEstimate";
+import type {
+  LLMCallStatus,
   LLMUsageEvent,
   LLMUsageGroupStat,
-  LLMUsageInfo,
   LLMUsageSummary,
-  LLMPurpose,
 } from "./types";
-import { estimateTokensFromMessages } from "./tokenEstimate";
 
 export interface LLMUsageEventStore {
   list(): Promise<LLMUsageEvent[]>;
@@ -107,7 +109,10 @@ export function createUsageEventFromResponse(
     providerName: response.providerName,
     model: response.model,
     status: "succeeded",
-    usage: response.usage,
+    promptTokens: response.usage.promptTokens,
+    completionTokens: response.usage.completionTokens,
+    totalTokens: response.usage.totalTokens,
+    estimated: response.usage.estimated,
     startedAt: startedAt.toISOString(),
     finishedAt: finishedAt.toISOString(),
     latencyMs: response.latencyMs,
@@ -118,7 +123,7 @@ export function createUsageEventFromResponse(
 
 export function createFailedUsageEvent(input: {
   request: LLMChatRequest;
-  providerConfig: Pick<LLMProviderConfig, "id" | "name" | "model">;
+  providerConfig: Pick<LLMProviderConfig, "providerId" | "providerName" | "model">;
   startedAt: Date;
   error: unknown;
   estimatedPromptTokens?: number;
@@ -128,16 +133,14 @@ export function createFailedUsageEvent(input: {
   return {
     id: createUsageEventId(),
     purpose: input.request.purpose,
-    providerId: input.providerConfig.id,
-    providerName: input.providerConfig.name,
+    providerId: input.providerConfig.providerId,
+    providerName: input.providerConfig.providerName,
     model: input.request.model ?? input.providerConfig.model,
     status: "failed",
-    usage: {
-      promptTokens: input.estimatedPromptTokens ?? 0,
-      completionTokens: 0,
-      totalTokens: input.estimatedPromptTokens ?? 0,
-      estimated: true,
-    },
+    promptTokens: input.estimatedPromptTokens ?? 0,
+    completionTokens: 0,
+    totalTokens: input.estimatedPromptTokens ?? 0,
+    estimated: true,
     startedAt: input.startedAt.toISOString(),
     finishedAt: finishedAt.toISOString(),
     latencyMs: finishedAt.getTime() - input.startedAt.getTime(),
@@ -203,8 +206,8 @@ function groupUsage(
     next.calls += 1;
     next.succeeded += event.status === "succeeded" ? 1 : 0;
     next.failed += event.status === "failed" ? 1 : 0;
-    next.totalTokens += event.usage.totalTokens;
-    next.estimatedTokens += event.usage.estimated ? event.usage.totalTokens : 0;
+    next.totalTokens += event.totalTokens ?? 0;
+    next.estimatedTokens += event.estimated ? event.totalTokens ?? 0 : 0;
 
     groups.set(key, next);
   }
@@ -219,12 +222,12 @@ function countByStatus(events: LLMUsageEvent[], status: LLMCallStatus): number {
 }
 
 function sumTokens(events: LLMUsageEvent[]): number {
-  return events.reduce((sum, event) => sum + event.usage.totalTokens, 0);
+  return events.reduce((sum, event) => sum + (event.totalTokens ?? 0), 0);
 }
 
 function sumEstimatedTokens(events: LLMUsageEvent[]): number {
   return events.reduce((sum, event) => {
-    return sum + (event.usage.estimated ? event.usage.totalTokens : 0);
+    return sum + (event.estimated ? event.totalTokens ?? 0 : 0);
   }, 0);
 }
 

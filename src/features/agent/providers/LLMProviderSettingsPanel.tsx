@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { LLMConnectionTestResult, LLMProviderConfig } from "./types";
 import { LLM_PROVIDER_PRESETS } from "./config";
-import "./LLMUsagePanel.css";
+import "./LLMProviderSettingsPanel.css";
 
 export interface LLMProviderSettingsPanelProps {
   value: LLMProviderConfig;
@@ -44,17 +44,17 @@ export function LLMProviderSettingsPanel({
   return (
     <section className="llm-settings-panel" aria-label="LLM Provider Settings">
       <div className="llm-usage-panel__header">
-        <h2>模型配置</h2>
+        <h2>Model Settings</h2>
       </div>
 
       <div className="llm-settings-panel__form">
         <label>
-          <span>预设</span>
+          <span>Preset</span>
           <select
             value=""
             onChange={(event) => {
               const preset = LLM_PROVIDER_PRESETS.find((item) => {
-                return item.id === event.target.value;
+                return item.providerId === event.target.value;
               });
               if (!preset) {
                 return;
@@ -62,8 +62,8 @@ export function LLMProviderSettingsPanel({
 
               setDraft({
                 ...draft,
-                id: preset.id,
-                name: preset.name,
+                providerId: preset.providerId,
+                providerName: preset.providerName,
                 kind: "openai-compatible",
                 baseUrl: preset.baseUrl,
                 model: preset.model,
@@ -71,21 +71,31 @@ export function LLMProviderSettingsPanel({
               });
             }}
           >
-            <option value="">选择预设</option>
+            <option value="">Select preset</option>
             {LLM_PROVIDER_PRESETS.map((preset) => (
-              <option key={preset.id} value={preset.id}>
-                {preset.name}
+              <option key={preset.providerId} value={preset.providerId}>
+                {preset.providerName}
               </option>
             ))}
           </select>
         </label>
 
         <label>
-          <span>Provider</span>
+          <span>Provider ID</span>
           <input
-            value={draft.name}
+            value={draft.providerId}
             onChange={(event) => {
-              setDraft({ ...draft, name: event.target.value });
+              setDraft({ ...draft, providerId: event.target.value });
+            }}
+          />
+        </label>
+
+        <label>
+          <span>Provider name</span>
+          <input
+            value={draft.providerName}
+            onChange={(event) => {
+              setDraft({ ...draft, providerName: event.target.value });
             }}
           />
         </label>
@@ -124,6 +134,7 @@ export function LLMProviderSettingsPanel({
           <span>API key</span>
           <input
             type="password"
+            placeholder="<your-api-key>"
             value={draft.apiKey ?? ""}
             onChange={(event) => {
               setDraft({ ...draft, apiKey: event.target.value });
@@ -134,11 +145,11 @@ export function LLMProviderSettingsPanel({
 
       <div className="llm-settings-panel__actions">
         <button type="button" onClick={() => onSave(draft)}>
-          保存配置
+          Save
         </button>
         {onTestConnection ? (
           <button type="button" onClick={handleTestConnection} disabled={testing}>
-            {testing ? "测试中" : "测试连接"}
+            {testing ? "Testing" : "Test connection"}
           </button>
         ) : null}
         {testResult ? (
@@ -147,7 +158,7 @@ export function LLMProviderSettingsPanel({
               testResult.ok ? "is-succeeded" : "is-failed"
             }`}
           >
-            {testResult.ok ? "连接成功" : testResult.errorMessage ?? "连接失败"}
+            {testResult.ok ? "Connected" : testResult.errorMessage ?? "Failed"}
           </span>
         ) : null}
       </div>

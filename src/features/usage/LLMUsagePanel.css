@@ -1,5 +1,4 @@
-.llm-usage-panel,
-.llm-settings-panel {
+.llm-usage-panel {
   color: #1d2528;
   display: grid;
   gap: 16px;
@@ -26,8 +25,7 @@
   font-size: 15px;
 }
 
-.llm-usage-panel button,
-.llm-settings-panel button {
+.llm-usage-panel button {
   background: #1e6656;
   border: 0;
   border-radius: 6px;
@@ -38,8 +36,7 @@
   padding: 0 14px;
 }
 
-.llm-usage-panel button:disabled,
-.llm-settings-panel button:disabled {
+.llm-usage-panel button:disabled {
   background: #8b9b97;
   cursor: default;
 }
@@ -144,53 +141,9 @@
   color: #9a341c;
 }
 
-.llm-settings-panel {
-  background: #f8faf9;
-  border: 1px solid #d8e3df;
-  border-radius: 8px;
-  padding: 16px;
-}
-
-.llm-settings-panel__form {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.llm-settings-panel label {
-  display: grid;
-  gap: 6px;
-}
-
-.llm-settings-panel label span {
-  color: #4c5c58;
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.llm-settings-panel input,
-.llm-settings-panel select {
-  background: #fff;
-  border: 1px solid #c9d6d2;
-  border-radius: 6px;
-  color: #1d2528;
-  font: inherit;
-  min-height: 38px;
-  padding: 0 10px;
-  width: 100%;
-}
-
-.llm-settings-panel__actions {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
 @media (max-width: 900px) {
   .llm-usage-panel__metrics,
-  .llm-usage-panel__grid,
-  .llm-settings-panel__form {
+  .llm-usage-panel__grid {
     grid-template-columns: 1fr;
   }
 }

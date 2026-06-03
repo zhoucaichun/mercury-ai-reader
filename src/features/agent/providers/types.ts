@@ -6,11 +6,9 @@ export type LLMPurpose =
   | "connection-test"
   | "other";
 
-export type LLMCallStatus = "succeeded" | "failed";
-
 export interface LLMProviderConfig {
-  id: string;
-  name: string;
+  providerId: string;
+  providerName: string;
   kind: LLMProviderKind;
   baseUrl: string;
   model: string;
@@ -36,7 +34,7 @@ export interface LLMChatRequest {
   model?: string;
   temperature?: number;
   maxTokens?: number;
-  metadata?: Record<string, string | number | boolean | null>;
+  metadata?: Record<string, unknown>;
   signal?: AbortSignal;
 }
 
@@ -72,44 +70,6 @@ export interface LLMProvider {
   readonly config: RedactedLLMProviderConfig;
   chat(request: LLMChatRequest): Promise<LLMChatResponse>;
   testConnection(signal?: AbortSignal): Promise<LLMConnectionTestResult>;
-}
-
-export interface LLMUsageEvent {
-  id: string;
-  purpose: LLMPurpose;
-  providerId: string;
-  providerName: string;
-  model: string;
-  status: LLMCallStatus;
-  usage: LLMUsageInfo;
-  startedAt: string;
-  finishedAt: string;
-  latencyMs: number;
-  errorMessage?: string;
-  requestId?: string;
-  metadata?: Record<string, string | number | boolean | null>;
-}
-
-export interface LLMUsageGroupStat {
-  key: string;
-  label: string;
-  calls: number;
-  succeeded: number;
-  failed: number;
-  totalTokens: number;
-  estimatedTokens: number;
-}
-
-export interface LLMUsageSummary {
-  totalCalls: number;
-  succeededCalls: number;
-  failedCalls: number;
-  totalTokens: number;
-  estimatedTokens: number;
-  byPurpose: LLMUsageGroupStat[];
-  byProvider: LLMUsageGroupStat[];
-  byModel: LLMUsageGroupStat[];
-  recent: LLMUsageEvent[];
 }
 
 export class LLMProviderError extends Error {

@@ -24,58 +24,58 @@ export function LLMUsagePanel({
         <h2>{title}</h2>
         {onRefresh ? (
           <button type="button" onClick={onRefresh}>
-            刷新
+            Refresh
           </button>
         ) : null}
       </div>
 
       <div className="llm-usage-panel__metrics">
-        <Metric label="总调用" value={summary.totalCalls} />
-        <Metric label="成功" value={summary.succeededCalls} tone="success" />
-        <Metric label="失败" value={summary.failedCalls} tone="danger" />
+        <Metric label="Calls" value={summary.totalCalls} />
+        <Metric label="Succeeded" value={summary.succeededCalls} tone="success" />
+        <Metric label="Failed" value={summary.failedCalls} tone="danger" />
         <Metric label="Token" value={formatTokenCount(summary.totalTokens)} />
       </div>
 
       <div className="llm-usage-panel__grid">
-        <UsageGroupTable title="功能类型" rows={summary.byPurpose} />
+        <UsageGroupTable title="Purpose" rows={summary.byPurpose} />
         <UsageGroupTable title="Provider" rows={summary.byProvider} />
         <UsageGroupTable title="Model" rows={summary.byModel} />
       </div>
 
       <div className="llm-usage-panel__section">
-        <h3>最近调用</h3>
+        <h3>Recent Calls</h3>
         <div className="llm-usage-panel__table-wrap">
           <table>
             <thead>
               <tr>
-                <th>时间</th>
-                <th>功能</th>
+                <th>Time</th>
+                <th>Purpose</th>
                 <th>Provider</th>
                 <th>Model</th>
-                <th>状态</th>
+                <th>Status</th>
                 <th>Token</th>
               </tr>
             </thead>
             <tbody>
               {summary.recent.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>暂无调用记录</td>
+                  <td colSpan={6}>No usage events yet.</td>
                 </tr>
               ) : (
                 summary.recent.map((event) => (
                   <tr key={event.id}>
-                    <td>{formatDateTime(event.startedAt)}</td>
+                    <td>{event.startedAt ? formatDateTime(event.startedAt) : "-"}</td>
                     <td>{formatPurpose(event.purpose)}</td>
                     <td>{event.providerName}</td>
                     <td>{event.model}</td>
                     <td>
                       <span className={`llm-usage-panel__status is-${event.status}`}>
-                        {event.status === "succeeded" ? "成功" : "失败"}
+                        {event.status === "succeeded" ? "Succeeded" : "Failed"}
                       </span>
                     </td>
                     <td>
-                      {formatTokenCount(event.usage.totalTokens)}
-                      {event.usage.estimated ? " 估算" : ""}
+                      {formatTokenCount(event.totalTokens ?? 0)}
+                      {event.estimated ? " est." : ""}
                     </td>
                   </tr>
                 ))
@@ -126,17 +126,17 @@ function UsageGroupTable({
         <table>
           <thead>
             <tr>
-              <th>名称</th>
-              <th>调用</th>
-              <th>成功</th>
-              <th>失败</th>
+              <th>Name</th>
+              <th>Calls</th>
+              <th>OK</th>
+              <th>Fail</th>
               <th>Token</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={5}>暂无数据</td>
+                <td colSpan={5}>No data.</td>
               </tr>
             ) : (
               rows.map((row) => (

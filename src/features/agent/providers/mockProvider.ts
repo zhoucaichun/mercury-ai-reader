@@ -46,8 +46,8 @@ export class MockLLMProvider implements LLMProvider {
 
     return {
       id: `mock-${Date.now()}`,
-      providerId: this.resolvedConfig.id,
-      providerName: this.resolvedConfig.name,
+      providerId: this.resolvedConfig.providerId,
+      providerName: this.resolvedConfig.providerName,
       model: request.model ?? this.resolvedConfig.model,
       content,
       usage: {
@@ -66,8 +66,8 @@ export class MockLLMProvider implements LLMProvider {
     await sleep(60);
 
     return {
-      providerId: this.resolvedConfig.id,
-      providerName: this.resolvedConfig.name,
+      providerId: this.resolvedConfig.providerId,
+      providerName: this.resolvedConfig.providerName,
       model: this.resolvedConfig.model,
       ok: true,
       latencyMs: Date.now() - startedAt,

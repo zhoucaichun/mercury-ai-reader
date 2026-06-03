@@ -113,8 +113,8 @@ export class OpenAICompatibleProvider implements LLMProvider {
 
       return {
         id: parsed.id ?? response.headers.get("x-request-id") ?? undefined,
-        providerId: this.resolvedConfig.id,
-        providerName: this.resolvedConfig.name,
+        providerId: this.resolvedConfig.providerId,
+        providerName: this.resolvedConfig.providerName,
         model: request.model ?? this.resolvedConfig.model,
         content,
         usage,
@@ -155,16 +155,16 @@ export class OpenAICompatibleProvider implements LLMProvider {
       });
 
       return {
-        providerId: this.resolvedConfig.id,
-        providerName: this.resolvedConfig.name,
+        providerId: this.resolvedConfig.providerId,
+        providerName: this.resolvedConfig.providerName,
         model: this.resolvedConfig.model,
         ok: true,
         latencyMs: Date.now() - startedAt,
       };
     } catch (error) {
       return {
-        providerId: this.resolvedConfig.id,
-        providerName: this.resolvedConfig.name,
+        providerId: this.resolvedConfig.providerId,
+        providerName: this.resolvedConfig.providerName,
         model: this.resolvedConfig.model,
         ok: false,
         latencyMs: Date.now() - startedAt,

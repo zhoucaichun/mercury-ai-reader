@@ -1,3 +1,7 @@
+export * from './types';
+export * from './usage';
+export * from './LLMUsagePanel';
+
 export const usageFeature = {
   key: 'usage',
   ownerTasks: ['T9'],

@@ -4,8 +4,8 @@ import type {
 } from "./types";
 
 export interface LLMProviderPreset {
-  id: string;
-  name: string;
+  providerId: string;
+  providerName: string;
   baseUrl: string;
   model: string;
   apiKeyEnv?: string;
@@ -14,32 +14,32 @@ export interface LLMProviderPreset {
 
 export const LLM_PROVIDER_PRESETS: LLMProviderPreset[] = [
   {
-    id: "deepseek",
-    name: "DeepSeek",
+    providerId: "deepseek",
+    providerName: "DeepSeek",
     baseUrl: "https://api.deepseek.com/v1",
     model: "deepseek-chat",
     apiKeyEnv: "DEEPSEEK_API_KEY",
     note: "OpenAI-compatible remote provider.",
   },
   {
-    id: "school-compatible",
-    name: "School model endpoint",
+    providerId: "school-compatible",
+    providerName: "School model endpoint",
     baseUrl: "https://<school-llm-endpoint>/v1",
     model: "<model-name>",
     apiKeyEnv: "SCHOOL_LLM_API_KEY",
     note: "Replace endpoint and model with the course-provided values.",
   },
   {
-    id: "hymt2",
-    name: "hymt2 compatible endpoint",
+    providerId: "hymt2",
+    providerName: "hymt2 compatible endpoint",
     baseUrl: "https://<hymt2-endpoint>/v1",
     model: "<hymt2-model>",
     apiKeyEnv: "HYMT2_API_KEY",
     note: "Keep this as a connection-test template until endpoint details are confirmed.",
   },
   {
-    id: "ollama-local",
-    name: "Ollama local",
+    providerId: "ollama-local",
+    providerName: "Ollama local",
     baseUrl: "http://localhost:11434/v1",
     model: "qwen2.5:7b",
     note: "Local OpenAI-compatible endpoint; API key can be any non-empty local value.",
@@ -96,11 +96,11 @@ export function redactProviderConfig(
 export function validateProviderConfig(config: LLMProviderConfig): string[] {
   const errors: string[] = [];
 
-  if (!config.id.trim()) {
+  if (!config.providerId.trim()) {
     errors.push("Provider id is required.");
   }
 
-  if (!config.name.trim()) {
+  if (!config.providerName.trim()) {
     errors.push("Provider name is required.");
   }
 
