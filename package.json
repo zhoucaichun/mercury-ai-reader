@@ -17,7 +17,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "preview:lan": "vite preview --host 0.0.0.0",
     "start": "npm run build && electron . --built",
-    "smoke:feed": "tsx scripts/smoke-feed.ts"
+    "smoke:feed": "tsx scripts/smoke-feed.ts",
+    "smoke:week2": "npx tsx src/features/feed/sync/smoke-week2.ts"
   },
   "engines": {
     "node": ">=24.0.0",
@@ -39,7 +40,7 @@
     "@vitejs/plugin-react": "^6.0.2",
     "concurrently": "^9.2.1",
     "electron": "^42.3.0",
-    "tsx": "^4.20.0",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vite": "^8.0.14",
     "vitest": "^4.1.8",
