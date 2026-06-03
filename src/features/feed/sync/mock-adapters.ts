@@ -16,6 +16,7 @@ import type {
   Week2ParsedFeed,
   Week2ParsedArticle,
   Week2Feed,
+  Week2FeedStatus,
   Week2Article,
   Week2ArticleContent,
   Week2SubscriptionProvider,

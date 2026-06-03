@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 /**
  * T5 Sync - Week 2 Smoke Test
  *
