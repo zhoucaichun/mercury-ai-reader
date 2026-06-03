@@ -156,5 +156,5 @@ export const agentFeature = {
 
 // ─── T11 Translation Agent ───────────────────────────────────────────
 
-export type { TranslationCallInput, TranslationCallState } from './translation';
-export { translationAgent, createTranslationAgent, createMockLLMProvider } from './translation';
+export type { TranslationCallInput, TranslationCallState } from './translation/';
+export { translationAgent, createTranslationAgent, createMockLLMProvider } from './translation/';

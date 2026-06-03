@@ -18,13 +18,13 @@ import type {
   LLMChatResponse,
   LLMProvider,
   LLMUsageEventStore,
-} from './index';
+} from '../index';
 import {
   InMemoryUsageStore,
   recordFailedUsage,
   recordUsageFromResponse,
-} from './index';
-import type { ProviderCallStatus } from './index';
+} from '../index';
+import type { ProviderCallStatus } from '../index';
 
 // ─── Translation-specific types ──────────────────────────────────────
 
