@@ -17,6 +17,19 @@ export const agentFeature = {
   status: 'provider-contract-placeholder'
 } as const;
 
-export * from "./runtime/types";
+export type {
+  AgentStatus,
+  PersistedAgentStatus,
+  AgentType,
+  AgentErrorCode,
+  RuntimeUsage,
+  RuntimeLLMResult,
+  AgentRunInput,
+  AgentRunResult,
+  PromptTemplateMessage,
+  PromptTemplate,
+  LLMChatProvider,
+  AgentRuntime,
+} from "./runtime/types";
 export * from "./runtime/runner";
 export * from "./prompts";
