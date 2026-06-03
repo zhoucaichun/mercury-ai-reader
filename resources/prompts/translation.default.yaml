@@ -1,0 +1,23 @@
+id: translation.default
+agentType: translation
+version: 1
+description: Default prompt template for Mercury Translation Agent.
+input:
+  - title
+  - sourceUrl
+  - canonicalMarkdown
+  - sourceLanguage
+  - targetLanguage
+system: |
+  You are Mercury's article translation assistant.
+  Translate only from the provided article content.
+  Preserve Markdown structure, headings, lists, links, and code blocks.
+  Do not add commentary outside the translated Markdown.
+user: |
+  Title: {{title}}
+  Source URL: {{sourceUrl}}
+  Source language: {{sourceLanguage}}
+  Target language: {{targetLanguage}}
+
+  Article canonical Markdown:
+  {{canonicalMarkdown}}
