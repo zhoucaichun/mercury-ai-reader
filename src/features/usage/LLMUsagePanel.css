@@ -1,0 +1,149 @@
+.llm-usage-panel {
+  color: #1d2528;
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+.llm-usage-panel__header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.llm-usage-panel__header h2,
+.llm-usage-panel__section h3 {
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.llm-usage-panel__section h3 {
+  font-size: 15px;
+}
+
+.llm-usage-panel button {
+  background: #1e6656;
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  min-height: 36px;
+  padding: 0 14px;
+}
+
+.llm-usage-panel button:disabled {
+  background: #8b9b97;
+  cursor: default;
+}
+
+.llm-usage-panel__metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.llm-usage-panel__metric {
+  background: #f4f7f6;
+  border: 1px solid #d8e3df;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  min-height: 78px;
+  padding: 14px;
+}
+
+.llm-usage-panel__metric span {
+  color: #5f6f6b;
+  font-size: 13px;
+}
+
+.llm-usage-panel__metric strong {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.1;
+}
+
+.llm-usage-panel__metric.is-success {
+  background: #eef8f1;
+  border-color: #b9dec4;
+}
+
+.llm-usage-panel__metric.is-danger {
+  background: #fff3ef;
+  border-color: #efc1b1;
+}
+
+.llm-usage-panel__grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.llm-usage-panel__section {
+  display: grid;
+  gap: 10px;
+}
+
+.llm-usage-panel__table-wrap {
+  border: 1px solid #d8e3df;
+  border-radius: 8px;
+  overflow: auto;
+}
+
+.llm-usage-panel table {
+  border-collapse: collapse;
+  min-width: 100%;
+}
+
+.llm-usage-panel th,
+.llm-usage-panel td {
+  border-bottom: 1px solid #e4ece9;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.llm-usage-panel th {
+  background: #f7faf9;
+  color: #54645f;
+  font-weight: 650;
+}
+
+.llm-usage-panel tr:last-child td {
+  border-bottom: 0;
+}
+
+.llm-usage-panel__status {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1;
+  padding: 5px 8px;
+}
+
+.llm-usage-panel__status.is-succeeded {
+  background: #e2f4e8;
+  color: #216337;
+}
+
+.llm-usage-panel__status.is-failed {
+  background: #fde9e2;
+  color: #9a341c;
+}
+
+@media (max-width: 900px) {
+  .llm-usage-panel__metrics,
+  .llm-usage-panel__grid {
+    grid-template-columns: 1fr;
+  }
+}
