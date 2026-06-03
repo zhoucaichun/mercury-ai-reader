@@ -28,13 +28,15 @@ import type {
   Article,
   ArticleContent,
   Feed,
-  FeedStatus
+  FeedStatus,
+  Week2ReaderDataPort
 } from '../../core/types';
 import { mockWeek2ReaderDataPort } from './index';
 
 type ActivePanel = AgentTaskType | 'usage' | 'settings';
 type FontSizeSetting = 'small' | 'medium' | 'large';
 type LineHeightSetting = 'compact' | 'comfortable' | 'loose';
+type SyncStatus = 'idle' | 'running' | 'succeeded' | 'failed';
 
 const statusLabels: Record<FeedStatus, string> = {
   ready: 'Ready',
@@ -79,6 +81,41 @@ function downloadMarkdown(article: Article, content: ArticleContent | null) {
   anchor.download = `${safeTitle || 'mercury-article'}.md`;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function createSnapshotReaderDataPort(input: {
+  feeds: Feed[];
+  articles: Article[];
+  contents: ArticleContent[];
+}): Week2ReaderDataPort {
+  return {
+    async listFeeds() {
+      return input.feeds;
+    },
+
+    async listArticles(query = {}) {
+      return input.articles.filter((article) => matchesArticleQuery(article, query));
+    },
+
+    async getArticleContent(articleId: string) {
+      return input.contents.find((content) => content.articleId === articleId) ?? null;
+    }
+  };
+}
+
+function matchesArticleQuery(article: Article, query: { feedId?: string; searchText?: string }) {
+  if (query.feedId && article.feedId !== query.feedId) {
+    return false;
+  }
+
+  const normalizedSearch = query.searchText?.trim().toLowerCase();
+  if (!normalizedSearch) {
+    return true;
+  }
+
+  return [article.title, article.excerpt, article.author, article.url, ...article.tags]
+    .filter((value): value is string => Boolean(value))
+    .some((value) => value.toLowerCase().includes(normalizedSearch));
 }
 
 function FeedStatusBadge({ status }: { status: FeedStatus }) {
@@ -160,19 +197,22 @@ function EmptyState({ message }: { message: string }) {
 }
 
 export function ReaderApp() {
-  const dataPort = useMemo(() => mockWeek2ReaderDataPort, []);
+  const [dataPort, setDataPort] = useState<Week2ReaderDataPort>(() => mockWeek2ReaderDataPort);
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedFeedId, setSelectedFeedId] = useState('');
   const [selectedArticleId, setSelectedArticleId] = useState('');
   const [selectedContent, setSelectedContent] = useState<ArticleContent | null>(null);
   const [searchText, setSearchText] = useState('');
+  const [feedUrlInput, setFeedUrlInput] = useState('');
   const [activePanel, setActivePanel] = useState<ActivePanel>('summary');
   const [fontSize, setFontSize] = useState<FontSizeSetting>('medium');
   const [lineHeight, setLineHeight] = useState<LineHeightSetting>('comfortable');
   const [feedsStatus, setFeedsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [articlesStatus, setArticlesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [contentStatus, setContentStatus] = useState<'idle' | 'loading' | 'ready' | 'empty' | 'error'>('idle');
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [syncMessage, setSyncMessage] = useState('Using local mock reader data');
 
   useEffect(() => {
     let cancelled = false;
@@ -260,6 +300,48 @@ export function ReaderApp() {
     setSelectedFeedId(feedId);
   }
 
+  async function handleRunWeek2Sync() {
+    if (!runtime?.runWeek2Sync) {
+      setSyncStatus('failed');
+      setSyncMessage('Open the Electron app to run the real Feed sync chain.');
+      return;
+    }
+
+    const feedUrl = feedUrlInput.trim();
+    const feedUrls = feedUrl ? [feedUrl] : undefined;
+
+    setSyncStatus('running');
+    setSyncMessage(feedUrl ? 'Syncing the entered Feed URL...' : 'Syncing two real demo Feed URLs...');
+    setFeeds((currentFeeds) => currentFeeds.map((feed) => ({ ...feed, status: 'syncing' })));
+
+    try {
+      const payload = await runtime.runWeek2Sync(feedUrls);
+      const nextDataPort = createSnapshotReaderDataPort(payload);
+      const nextFeedId = payload.feeds[0]?.id ?? '';
+      const nextArticles = payload.articles.filter((article) => !nextFeedId || article.feedId === nextFeedId);
+      const nextArticleId = nextArticles[0]?.id ?? payload.articles[0]?.id ?? '';
+      const nextContent = payload.contents.find((content) => content.articleId === nextArticleId) ?? null;
+
+      setDataPort(() => nextDataPort);
+      setSearchText('');
+      setFeeds(payload.feeds);
+      setArticles(nextArticles);
+      setSelectedFeedId(nextFeedId);
+      setSelectedArticleId(nextArticleId);
+      setSelectedContent(nextContent);
+      setFeedsStatus('ready');
+      setArticlesStatus('ready');
+      setContentStatus(nextContent?.cleanedHtml && nextContent.canonicalMarkdown ? 'ready' : 'empty');
+      setSyncStatus(payload.result.status === 'failed' ? 'failed' : 'succeeded');
+      setSyncMessage(
+        `Synced ${payload.result.totalSubscriptions} feed(s), saved ${payload.result.totalSavedArticles} article(s).`
+      );
+    } catch (error) {
+      setSyncStatus('failed');
+      setSyncMessage(error instanceof Error ? error.message : 'Feed sync failed.');
+    }
+  }
+
   return (
     <main className="app-shell">
       <aside className="sidebar" aria-label="Feeds">
@@ -280,14 +362,34 @@ export function ReaderApp() {
         </div>
 
         <div className="sidebar-actions">
-          <button className="primary-button" type="button">
+          <button className="primary-button" type="button" onClick={handleRunWeek2Sync} disabled={syncStatus === 'running'}>
             <Plus size={17} aria-hidden="true" />
-            Add Feed
+            {syncStatus === 'running' ? 'Syncing' : 'Add Feed'}
           </button>
-          <button className="icon-button" type="button" aria-label="Sync feeds" title="Sync feeds">
-            <RefreshCw size={18} aria-hidden="true" />
+          <button
+            className="icon-button"
+            type="button"
+            aria-label="Sync feeds"
+            title="Sync feeds"
+            onClick={handleRunWeek2Sync}
+            disabled={syncStatus === 'running'}
+          >
+            <RefreshCw className={syncStatus === 'running' ? 'spin-icon' : ''} size={18} aria-hidden="true" />
           </button>
         </div>
+
+        <label className="feed-url-box">
+          <Wifi size={17} aria-hidden="true" />
+          <input
+            aria-label="Feed URL"
+            placeholder="Feed URL, empty uses demo feeds"
+            type="url"
+            value={feedUrlInput}
+            onChange={(event) => setFeedUrlInput(event.target.value)}
+          />
+        </label>
+
+        <div className={`sync-message sync-message-${syncStatus}`}>{syncMessage}</div>
 
         <label className="search-box">
           <Search size={17} aria-hidden="true" />

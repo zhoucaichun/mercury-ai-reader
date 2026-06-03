@@ -1,5 +1,17 @@
 /// <reference types="vite/client" />
 
+import type { Week2Article, Week2ArticleContent, Week2Feed } from './core/types';
+import type { Week2SyncAllResult } from './features/feed/sync/types';
+
+type MercuryWeek2SyncPayload = {
+  result: Week2SyncAllResult;
+  feeds: Week2Feed[];
+  articles: Week2Article[];
+  contents: Week2ArticleContent[];
+  feedUrls: string[];
+  syncedAt: string;
+};
+
 type MercuryRuntimeInfo = {
   platform: NodeJS.Platform;
   versions: {
@@ -7,8 +19,13 @@ type MercuryRuntimeInfo = {
     electron: string;
     node: string;
   };
+  runWeek2Sync(feedUrls?: string[]): Promise<MercuryWeek2SyncPayload>;
 };
 
-interface Window {
-  mercury?: MercuryRuntimeInfo;
+declare global {
+  interface Window {
+    mercury?: MercuryRuntimeInfo;
+  }
 }
+
+export {};

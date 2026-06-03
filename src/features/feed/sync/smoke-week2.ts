@@ -13,12 +13,12 @@
  * 4. 输出统计信息
  */
 
-import { createSyncService } from './sync.service';
+import { createSyncService } from './sync.service.js';
 import {
   MockSubscriptionProvider,
   MockFeedParser,
   MockStoragePort,
-} from './mock-adapters';
+} from './mock-adapters.js';
 
 async function main() {
   console.log('='.repeat(60));

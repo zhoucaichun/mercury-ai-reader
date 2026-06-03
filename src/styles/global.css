@@ -140,6 +140,12 @@ button {
   background: #254f47;
 }
 
+.primary-button:disabled,
+.icon-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .icon-button:hover,
 .tool-button:hover {
   border-color: #9baea8;
@@ -152,7 +158,8 @@ button {
   border-color: #254f47;
 }
 
-.search-box {
+.search-box,
+.feed-url-box {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -164,13 +171,53 @@ button {
   border-radius: 7px;
 }
 
-.search-box input {
+.search-box input,
+.feed-url-box input {
   width: 100%;
   min-width: 0;
   color: #252525;
   background: transparent;
   border: 0;
   outline: 0;
+}
+
+.sync-message {
+  min-height: 38px;
+  padding: 9px 11px;
+  color: #68736f;
+  background: #fbfaf7;
+  border: 1px solid #ded9cc;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.sync-message-succeeded {
+  color: #21594e;
+  background: #dfeee8;
+  border-color: #b9d7cd;
+}
+
+.sync-message-failed {
+  color: #873638;
+  background: #f1d8d4;
+  border-color: #e7b8b2;
+}
+
+.sync-message-running {
+  color: #6c4f10;
+  background: #f1e4bf;
+  border-color: #dccb98;
+}
+
+.spin-icon {
+  animation: spin-icon 900ms linear infinite;
+}
+
+@keyframes spin-icon {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .feed-list,

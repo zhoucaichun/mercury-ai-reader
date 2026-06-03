@@ -21,7 +21,7 @@ import type {
   Week2SubscriptionProvider,
   Week2FeedParser,
   Week2StoragePort,
-} from './types';
+} from './types.js';
 
 function toISODate(): ISODateString {
   return new Date().toISOString();

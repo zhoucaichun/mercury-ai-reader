@@ -39,25 +39,25 @@ export type {
   Week2SyncService,
   Week2SyncFeedResult,
   Week2SyncAllResult,
-} from './types';
+} from './types.js';
 
 // 导出 SyncService 创建函数
-export { createSyncService } from './sync.service';
+export { createSyncService } from './sync.service.js';
 
 // 导出 Mock Adapters
 export {
   MockSubscriptionProvider,
   MockFeedParser,
   MockStoragePort,
-} from './mock-adapters';
+} from './mock-adapters.js';
 
 // 导出便捷函数：创建基于 mock 的完整 SyncService
-import { createSyncService } from './sync.service';
+import { createSyncService } from './sync.service.js';
 import {
   MockSubscriptionProvider,
   MockFeedParser,
   MockStoragePort,
-} from './mock-adapters';
+} from './mock-adapters.js';
 
 /**
  * 创建基于 Mock Adapters 的完整 SyncService

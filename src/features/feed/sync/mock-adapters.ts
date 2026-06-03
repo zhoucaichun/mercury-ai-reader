@@ -22,7 +22,7 @@ import type {
   Week2SubscriptionProvider,
   Week2FeedParser,
   Week2StoragePort,
-} from './types';
+} from './types.js';
 
 // ─── 辅助函数 ────────────────────────────────────
 

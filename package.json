@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "description": "Mercury local-first AI reader course project",
-  "type": "module",
-  "main": "dist-electron/main.js",
+  "type": "commonjs",
+  "main": "dist-electron/electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:electron\"",
     "dev:renderer": "vite --host 127.0.0.1",
@@ -17,8 +17,49 @@
     "preview": "vite preview --host 127.0.0.1",
     "preview:lan": "vite preview --host 0.0.0.0",
     "start": "npm run build && electron . --built",
+    "pack:dir": "npm run build && electron-builder --dir",
+    "pack:win": "npm run build && electron-builder --win portable",
+    "pack:win:zip": "npm run build && electron-builder --win zip",
     "smoke:feed": "tsx scripts/smoke-feed.ts",
     "smoke:week2": "npx tsx src/features/feed/sync/smoke-week2.ts"
+  },
+  "build": {
+    "appId": "edu.ecnu.mercury-ai-reader",
+    "productName": "Mercury AI Reader",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "npmRebuild": false,
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-Windows-${arch}.${ext}"
+    },
+    "mac": {
+      "target": [
+        "zip"
+      ],
+      "artifactName": "${productName}-${version}-macOS-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "artifactName": "${productName}-${version}-Linux-${arch}.${ext}"
+    }
   },
   "engines": {
     "node": ">=24.0.0",
@@ -40,6 +81,7 @@
     "@vitejs/plugin-react": "^6.0.2",
     "concurrently": "^9.2.1",
     "electron": "^42.3.0",
+    "electron-builder": "^26.8.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vite": "^8.0.14",

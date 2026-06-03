@@ -1,13 +1,12 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { runWeek2Sync } from './week2-sync.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const devServerUrl = 'http://127.0.0.1:5173';
+let mainWindow: BrowserWindow | null = null;
 
 function createMainWindow() {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1320,
     height: 860,
     minWidth: 960,
@@ -26,14 +25,21 @@ function createMainWindow() {
     return { action: 'deny' };
   });
 
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+
   const shouldLoadBuiltFiles = app.isPackaged || process.argv.includes('--built');
   if (shouldLoadBuiltFiles) {
-    void mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    const indexPath = path.join(__dirname, '../../dist/index.html');
+    void mainWindow.loadFile(indexPath);
     return;
   }
 
   void mainWindow.loadURL(devServerUrl);
 }
+
+ipcMain.handle('week2:sync', (_event, feedUrls?: string[]) => runWeek2Sync(feedUrls));
 
 void app.whenReady().then(() => {
   createMainWindow();
