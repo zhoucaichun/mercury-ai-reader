@@ -174,7 +174,7 @@ export function getRecentUsageEvents(
 ): LLMUsageEvent[] {
   return [...events]
     .sort((left, right) => {
-      return Date.parse(right.startedAt) - Date.parse(left.startedAt);
+      return Date.parse(right.startedAt ?? "") - Date.parse(left.startedAt ?? "");
     })
     .slice(0, limit);
 }
