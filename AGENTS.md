@@ -57,7 +57,7 @@ mercury-ai-reader/
 │  │  ├─ usage/
 │  │  └─ export/
 │  └─ styles/
-├─ 任务文档/
+├─ task-documents/
 └─ package.json
 ```
 

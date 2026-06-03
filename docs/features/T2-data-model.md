@@ -1191,7 +1191,7 @@ export function initDatabase(userDataPath: string): Database.Database {
 
 ## 五、LLM 用量记录完整调用链（T2 ↔ T8/T9/T10/T11 对齐）
 
-**背景**：[任务池](file:///home/ly/kaiyuan/mercury-ai-reader/任务文档/Mercury任务池与AI提示词.md) 明确分工：T2 负责 `LLMUsageEvent` 数据结构和存储接口；T8 负责 Agent Runtime 中统一的 usage record 记录契约；T9 负责 Provider 返回 token 信息；T10/T11 负责产生日志或调用统一记录接口。
+**背景**：[任务池](../../task-documents/mercury-task-pool-ai-prompts.md) 明确分工：T2 负责 `LLMUsageEvent` 数据结构和存储接口；T8 负责 Agent Runtime 中统一的 usage record 记录契约；T9 负责 Provider 返回 token 信息；T10/T11 负责产生日志或调用统一记录接口。
 
 以下是一次完整 Summary 任务的调用链示例（T10 → T9 → T2）：
 
@@ -1434,7 +1434,7 @@ function runMigrations(db: Database.Database): void {
 
 ## 八、Seed / Mock 数据
 
-**背景**：[W1 排期](file:///home/ly/kaiyuan/mercury-ai-reader/任务文档/Mercury五周排期与每周集成计划.md) 要求建立 "mock 数据入口，方便其他同学不等后端接口也能开发"。T2 应提供 seed 方法，让 T7（阅读器 UI）、T10（Summary）、T11（Translation）在没有真实同步数据和 LLM 调用的情况下也能联调开发。
+**背景**：[W1 排期](../../task-documents/mercury-five-week-integration-plan.md) 要求建立 "mock 数据入口，方便其他同学不等后端接口也能开发"。T2 应提供 seed 方法，让 T7（阅读器 UI）、T10（Summary）、T11（Translation）在没有真实同步数据和 LLM 调用的情况下也能联调开发。
 
 ```ts
 // src/core/database/seed.ts
@@ -1466,7 +1466,7 @@ seed 数据内容：
 
 ## 九、分阶段实现计划
 
-以下按 [五周排期文档](file:///home/ly/kaiyuan/mercury-ai-reader/任务文档/Mercury五周排期与每周集成计划.md) 对 T2 的要求拆解实现节奏。每周末应完成对应接口并通过单元测试。
+以下按 [五周排期文档](../../task-documents/mercury-five-week-integration-plan.md) 对 T2 的要求拆解实现节奏。每周末应完成对应接口并通过单元测试。
 
 ### W1（本周）：数据模型草案 + 基础存储接口
 
