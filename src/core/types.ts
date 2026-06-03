@@ -1,37 +1,56 @@
-export type FeedStatus = 'ready' | 'syncing' | 'error';
-export type ArticleReadState = 'unread' | 'reading' | 'saved';
-export type AgentTaskType = 'summary' | 'translation';
-export type AgentRunStatus = 'idle' | 'running' | 'succeeded' | 'failed';
+export type ISODateString = string;
 
-export type Feed = {
+export type Week2FeedStatus = 'ready' | 'syncing' | 'error';
+export type Week2ArticleReadState = 'unread' | 'reading' | 'saved';
+export type Week2SubscriptionStatus = 'active' | 'disabled' | 'error';
+export type Week2SubscriptionSource = 'manual' | 'opml' | 'mock';
+export type AgentTaskType = 'summary' | 'translation';
+export type AgentRunStatus = 'idle' | 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+
+export type FeedStatus = Week2FeedStatus;
+export type ArticleReadState = Week2ArticleReadState;
+
+export type Week2Feed = {
   id: string;
   title: string;
-  siteUrl: string;
   feedUrl: string;
+  siteUrl?: string;
   unreadCount: number;
-  status: FeedStatus;
-  lastSyncedAt: string;
+  status: Week2FeedStatus;
+  lastSyncedAt?: ISODateString;
 };
 
-export type Article = {
+export type Week2Article = {
   id: string;
   feedId: string;
   title: string;
-  author: string;
   url: string;
+  author?: string;
   excerpt: string;
-  publishedAt: string;
-  readState: ArticleReadState;
+  publishedAt?: ISODateString;
+  readState: Week2ArticleReadState;
   estimatedMinutes: number;
   tags: string[];
 };
 
-export type ArticleContent = {
+export type Week2ArticleContent = {
   articleId: string;
   sourceHtml: string;
   cleanedHtml: string;
   canonicalMarkdown: string;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
 };
+
+export type Week2ReaderDataPort = {
+  listFeeds(): Promise<Week2Feed[]>;
+  listArticles(query?: { feedId?: string; searchText?: string }): Promise<Week2Article[]>;
+  getArticleContent(articleId: string): Promise<Week2ArticleContent | null>;
+};
+
+export type Feed = Week2Feed;
+export type Article = Week2Article;
+export type ArticleContent = Week2ArticleContent;
 
 export type AgentPreview = {
   taskType: AgentTaskType;
@@ -52,12 +71,17 @@ export type ProviderPreview = {
 export type LLMUsageEventPreview = {
   id: string;
   providerId: string;
-  taskType: AgentTaskType;
+  providerName: string;
+  purpose: AgentTaskType | 'connection-test' | 'other';
   model: string;
+  status: 'succeeded' | 'failed';
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
-  createdAt: string;
+  estimated?: boolean;
+  startedAt: string;
+  finishedAt: string;
+  latencyMs?: number;
 };
 
 export type MercuryMockDataset = {
