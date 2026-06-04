@@ -343,7 +343,12 @@ export function ReaderApp() {
     const opmlPart = payload.opml
       ? ` Imported ${payload.opml.importedCount} OPML feed(s), skipped ${payload.opml.skippedCount}.`
       : '';
-    const storagePart = payload.storage?.mode === 'sqlite' ? ' Stored in SQLite.' : '';
+    const storagePart =
+      payload.storage?.mode === 'sqlite'
+        ? ' Stored in SQLite.'
+        : payload.storage?.mode === 'json-fallback'
+          ? ' Stored locally.'
+          : '';
     setSyncMessage(
       `Synced ${payload.result.totalSubscriptions} feed(s), saved ${payload.result.totalSavedArticles} article(s).${opmlPart}${storagePart}`
     );

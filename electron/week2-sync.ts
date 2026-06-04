@@ -16,6 +16,7 @@ import { parseOpmlText } from '../src/features/feed/opml/index.js';
 import { week2FeedParser } from '../src/features/feed/parser/index.js';
 import { createReaderPipeline } from '../src/features/reader/pipeline/index.js';
 import { createWeek2StoragePort, initDatabase } from '../src/core/database/index.js';
+import { createJsonWeek2StoragePort } from './json-week2-storage.js';
 
 const DEFAULT_FEED_URLS = [
   'https://www.ruanyifeng.com/blog/atom.xml',
@@ -30,7 +31,7 @@ export type Week2FrontendSyncPayload = {
   feedUrls: string[];
   syncedAt: string;
   storage: {
-    mode: 'sqlite';
+    mode: 'sqlite' | 'json-fallback';
     databasePath: string;
   };
   opml?: {
@@ -48,19 +49,32 @@ export type Week2OpmlPreviewPayload = {
 
 let database: Database.Database | null = null;
 let storagePort: Week2StoragePort | null = null;
+let storageMode: Week2FrontendSyncPayload['storage']['mode'] = 'sqlite';
+let storagePath: string | null = null;
 
 function getStorage() {
   if (!database || !storagePort) {
     const userDataPath = app.getPath('userData');
-    database = initDatabase(userDataPath);
-    storagePort = createWeek2StoragePort(database);
+    try {
+      database = initDatabase(userDataPath);
+      storagePort = createWeek2StoragePort(database);
+      storageMode = 'sqlite';
+      storagePath = database.name;
+    } catch (error) {
+      console.warn('[Mercury] SQLite native module unavailable, using JSON fallback storage.', error);
+      const fallbackStorage = createJsonWeek2StoragePort(userDataPath);
+      database = null;
+      storagePort = fallbackStorage;
+      storageMode = 'json-fallback';
+      storagePath = fallbackStorage.databasePath;
+    }
   }
 
   return storagePort;
 }
 
 function getDatabasePath() {
-  return database?.name ?? `${app.getPath('userData')}\\mercury.sqlite`;
+  return storagePath ?? database?.name ?? `${app.getPath('userData')}\\mercury.sqlite`;
 }
 
 function toFeedTitle(feedUrl: string) {
@@ -166,7 +180,7 @@ async function buildPayload(input: {
     feedUrls: input.feedUrls,
     syncedAt: new Date().toISOString(),
     storage: {
-      mode: 'sqlite',
+      mode: storageMode,
       databasePath: getDatabasePath()
     },
     opml: input.opml

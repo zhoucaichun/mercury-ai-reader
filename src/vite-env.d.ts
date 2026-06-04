@@ -12,7 +12,7 @@ type MercuryWeek2SyncPayload = {
   feedUrls: string[];
   syncedAt: string;
   storage?: {
-    mode: 'sqlite';
+    mode: 'sqlite' | 'json-fallback';
     databasePath: string;
   };
   opml?: {
