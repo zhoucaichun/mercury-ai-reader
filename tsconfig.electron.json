@@ -11,5 +11,10 @@
     "rootDir": ".",
     "types": ["node", "electron"]
   },
-  "include": ["electron", "src/features/feed/sync/**/*.ts"]
+  "include": [
+    "electron",
+    "src/core/database/**/*.ts",
+    "src/features/feed/**/*.ts",
+    "src/features/reader/pipeline/**/*.ts"
+  ]
 }

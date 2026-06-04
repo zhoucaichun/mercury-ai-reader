@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'node:path';
-import { runWeek2Sync } from './week2-sync.js';
+import { importOpmlAndSync, runWeek2Sync } from './week2-sync.js';
 
 const devServerUrl = 'http://127.0.0.1:5173';
 let mainWindow: BrowserWindow | null = null;
@@ -40,6 +40,7 @@ function createMainWindow() {
 }
 
 ipcMain.handle('week2:sync', (_event, feedUrls?: string[]) => runWeek2Sync(feedUrls));
+ipcMain.handle('week2:import-opml', (_event, opmlText: string) => importOpmlAndSync(opmlText));
 
 void app.whenReady().then(() => {
   createMainWindow();

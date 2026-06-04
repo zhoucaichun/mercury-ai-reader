@@ -158,6 +158,15 @@ button {
   border-color: #254f47;
 }
 
+.icon-button.is-disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.icon-button input[type="file"] {
+  display: none;
+}
+
 .search-box,
 .feed-url-box {
   display: flex;

@@ -10,6 +10,15 @@ type MercuryWeek2SyncPayload = {
   contents: Week2ArticleContent[];
   feedUrls: string[];
   syncedAt: string;
+  storage?: {
+    mode: 'sqlite';
+    databasePath: string;
+  };
+  opml?: {
+    importedCount: number;
+    skippedCount: number;
+    messages: string[];
+  };
 };
 
 type MercuryRuntimeInfo = {
@@ -20,6 +29,7 @@ type MercuryRuntimeInfo = {
     node: string;
   };
   runWeek2Sync(feedUrls?: string[]): Promise<MercuryWeek2SyncPayload>;
+  importOpmlText(opmlText: string): Promise<MercuryWeek2SyncPayload>;
 };
 
 declare global {

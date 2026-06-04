@@ -129,22 +129,28 @@ export function parseOpmlText(opmlText: string, now = new Date().toISOString()):
 }
 
 function extractOutlines(opmlText: string): RawOutline[] {
-  if (typeof DOMParser !== 'undefined') {
-    const parsed = new DOMParser().parseFromString(opmlText, 'application/xml');
+  const Parser = (globalThis as { DOMParser?: new () => { parseFromString(input: string, mimeType: string): any } }).DOMParser;
+
+  if (Parser) {
+    const parsed = new Parser().parseFromString(opmlText, 'application/xml');
     const parserError = parsed.querySelector('parsererror');
 
     if (!parserError) {
       const body = parsed.querySelector('body') ?? parsed.documentElement;
-      return Array.from(body.children).flatMap((node) => walkOutlineNode(node));
+      return Array.from(body.children as ArrayLike<any>).flatMap((node) => walkOutlineNode(node));
     }
   }
 
   return extractOutlinesWithRegex(opmlText);
 }
 
-function walkOutlineNode(node: Element, parentGroupName?: string): RawOutline[] {
+function walkOutlineNode(node: {
+  tagName: string;
+  children: ArrayLike<any>;
+  getAttribute(name: string): string | null;
+}, parentGroupName?: string): RawOutline[] {
   if (node.tagName.toLowerCase() !== 'outline') {
-    return Array.from(node.children).flatMap((child) => walkOutlineNode(child, parentGroupName));
+    return Array.from(node.children as ArrayLike<any>).flatMap((child) => walkOutlineNode(child, parentGroupName));
   }
 
   const title = node.getAttribute('title') ?? node.getAttribute('text') ?? undefined;
@@ -155,7 +161,7 @@ function walkOutlineNode(node: Element, parentGroupName?: string): RawOutline[] 
   const current = xmlUrl
     ? [{ title, text: node.getAttribute('text') ?? undefined, xmlUrl, htmlUrl, type, groupName: parentGroupName }]
     : [];
-  const children = Array.from(node.children).flatMap((child) => walkOutlineNode(child, groupName));
+  const children = Array.from(node.children as ArrayLike<any>).flatMap((child) => walkOutlineNode(child, groupName));
 
   return [...current, ...children];
 }

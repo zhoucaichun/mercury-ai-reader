@@ -7,5 +7,6 @@ contextBridge.exposeInMainWorld('mercury', {
     electron: process.versions.electron,
     node: process.versions.node
   },
-  runWeek2Sync: (feedUrls?: string[]) => ipcRenderer.invoke('week2:sync', feedUrls)
+  runWeek2Sync: (feedUrls?: string[]) => ipcRenderer.invoke('week2:sync', feedUrls),
+  importOpmlText: (opmlText: string) => ipcRenderer.invoke('week2:import-opml', opmlText)
 });

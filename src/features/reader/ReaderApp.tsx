@@ -11,6 +11,7 @@ import {
   Download,
   ExternalLink,
   FileText,
+  FolderInput,
   Languages,
   Plus,
   RefreshCw,
@@ -300,6 +301,34 @@ export function ReaderApp() {
     setSelectedFeedId(feedId);
   }
 
+  function applySyncPayload(payload: Awaited<ReturnType<NonNullable<typeof runtime>['runWeek2Sync']>>) {
+    const nextDataPort = createSnapshotReaderDataPort(payload);
+    const nextFeedId = payload.feeds[0]?.id ?? '';
+    const nextArticles = payload.articles.filter((article) => !nextFeedId || article.feedId === nextFeedId);
+    const nextArticleId = nextArticles[0]?.id ?? payload.articles[0]?.id ?? '';
+    const nextContent = payload.contents.find((content) => content.articleId === nextArticleId) ?? null;
+
+    setDataPort(() => nextDataPort);
+    setSearchText('');
+    setFeeds(payload.feeds);
+    setArticles(nextArticles);
+    setSelectedFeedId(nextFeedId);
+    setSelectedArticleId(nextArticleId);
+    setSelectedContent(nextContent);
+    setFeedsStatus('ready');
+    setArticlesStatus('ready');
+    setContentStatus(nextContent?.cleanedHtml && nextContent.canonicalMarkdown ? 'ready' : 'empty');
+    setSyncStatus(payload.result.status === 'failed' ? 'failed' : 'succeeded');
+
+    const opmlPart = payload.opml
+      ? ` Imported ${payload.opml.importedCount} OPML feed(s), skipped ${payload.opml.skippedCount}.`
+      : '';
+    const storagePart = payload.storage?.mode === 'sqlite' ? ' Stored in SQLite.' : '';
+    setSyncMessage(
+      `Synced ${payload.result.totalSubscriptions} feed(s), saved ${payload.result.totalSavedArticles} article(s).${opmlPart}${storagePart}`
+    );
+  }
+
   async function handleRunWeek2Sync() {
     if (!runtime?.runWeek2Sync) {
       setSyncStatus('failed');
@@ -316,29 +345,31 @@ export function ReaderApp() {
 
     try {
       const payload = await runtime.runWeek2Sync(feedUrls);
-      const nextDataPort = createSnapshotReaderDataPort(payload);
-      const nextFeedId = payload.feeds[0]?.id ?? '';
-      const nextArticles = payload.articles.filter((article) => !nextFeedId || article.feedId === nextFeedId);
-      const nextArticleId = nextArticles[0]?.id ?? payload.articles[0]?.id ?? '';
-      const nextContent = payload.contents.find((content) => content.articleId === nextArticleId) ?? null;
-
-      setDataPort(() => nextDataPort);
-      setSearchText('');
-      setFeeds(payload.feeds);
-      setArticles(nextArticles);
-      setSelectedFeedId(nextFeedId);
-      setSelectedArticleId(nextArticleId);
-      setSelectedContent(nextContent);
-      setFeedsStatus('ready');
-      setArticlesStatus('ready');
-      setContentStatus(nextContent?.cleanedHtml && nextContent.canonicalMarkdown ? 'ready' : 'empty');
-      setSyncStatus(payload.result.status === 'failed' ? 'failed' : 'succeeded');
-      setSyncMessage(
-        `Synced ${payload.result.totalSubscriptions} feed(s), saved ${payload.result.totalSavedArticles} article(s).`
-      );
+      applySyncPayload(payload);
     } catch (error) {
       setSyncStatus('failed');
       setSyncMessage(error instanceof Error ? error.message : 'Feed sync failed.');
+    }
+  }
+
+  async function handleImportOpmlFile(file?: File) {
+    if (!file) return;
+
+    if (!runtime?.importOpmlText) {
+      setSyncStatus('failed');
+      setSyncMessage('Open the Electron app to import OPML.');
+      return;
+    }
+
+    setSyncStatus('running');
+    setSyncMessage(`Importing ${file.name} and syncing its feeds...`);
+
+    try {
+      const payload = await runtime.importOpmlText(await file.text());
+      applySyncPayload(payload);
+    } catch (error) {
+      setSyncStatus('failed');
+      setSyncMessage(error instanceof Error ? error.message : 'OPML import failed.');
     }
   }
 
@@ -376,6 +407,18 @@ export function ReaderApp() {
           >
             <RefreshCw className={syncStatus === 'running' ? 'spin-icon' : ''} size={18} aria-hidden="true" />
           </button>
+          <label className={syncStatus === 'running' ? 'icon-button is-disabled' : 'icon-button'} aria-label="Import OPML" title="Import OPML">
+            <FolderInput size={18} aria-hidden="true" />
+            <input
+              accept=".opml,.xml,text/xml"
+              disabled={syncStatus === 'running'}
+              type="file"
+              onChange={(event) => {
+                void handleImportOpmlFile(event.target.files?.[0]);
+                event.currentTarget.value = '';
+              }}
+            />
+          </label>
         </div>
 
         <label className="feed-url-box">

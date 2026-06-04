@@ -196,24 +196,25 @@ export function createSyncService(deps: {
     };
 
     try {
-      await storage.saveFeeds([feed]);
+      const [savedFeed] = await storage.saveFeeds([feed]);
+      const savedFeedId = savedFeed?.id ?? feedId;
 
       // 3. 保存文章（内部去重）
       const savedArticles = await storage.saveArticles({
-        feedId,
+        feedId: savedFeedId,
         articles: parsedFeed.articles,
       });
 
       // 4. 更新 Feed 状态为 ready
       await storage.updateFeedSyncStatus({
-        feedId,
+        feedId: savedFeedId,
         status: 'ready',
         lastSyncedAt: toISODate(),
       });
 
       return {
         subscriptionId,
-        feedId,
+        feedId: savedFeedId,
         status: 'succeeded',
         parsedCount: parsedFeed.articles.length,
         savedCount: savedArticles.length,
