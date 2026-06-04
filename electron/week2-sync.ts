@@ -40,6 +40,12 @@ export type Week2FrontendSyncPayload = {
   };
 };
 
+export type Week2OpmlPreviewPayload = {
+  subscriptions: Week2Subscription[];
+  skippedCount: number;
+  messages: string[];
+};
+
 let database: Database.Database | null = null;
 let storagePort: Week2StoragePort | null = null;
 
@@ -99,6 +105,32 @@ function createSubscriptionProvider(feedUrls: string[], source: Week2Subscriptio
   };
 }
 
+function createStaticSubscriptionProvider(subscriptions: Week2Subscription[]): Week2SubscriptionProvider {
+  return {
+    async listActiveSubscriptions() {
+      return subscriptions.filter((subscription) => subscription.status === 'active');
+    }
+  };
+}
+
+async function listActiveStoredSubscriptions(): Promise<Week2Subscription[]> {
+  const feeds = await getStorage().listFeeds();
+  const now = new Date().toISOString();
+
+  return feeds
+    .filter((feed) => feed.isEnabled !== false)
+    .map((feed) => ({
+      id: feed.id,
+      title: feed.title,
+      feedUrl: feed.feedUrl,
+      siteUrl: feed.siteUrl,
+      source: 'manual',
+      status: 'active',
+      createdAt: feed.lastSyncedAt ?? now,
+      updatedAt: feed.lastSyncedAt ?? now
+    }));
+}
+
 async function buildPayload(input: {
   result: Week2SyncAllResult;
   feedUrls: string[];
@@ -148,14 +180,36 @@ export async function runWeek2Sync(feedUrls?: string[]): Promise<Week2FrontendSy
     throw new Error('Please enter a valid http/https Feed URL.');
   }
 
+  if (feedUrls?.length) {
+    const now = new Date().toISOString();
+    await getStorage().saveFeeds(
+      normalizedFeedUrls.map((feedUrl) => ({
+        id: 'auto',
+        title: toFeedTitle(feedUrl),
+        feedUrl,
+        siteUrl: undefined,
+        unreadCount: 0,
+        status: 'ready',
+        lastSyncedAt: now,
+        isEnabled: true
+      }))
+    );
+  }
+
+  const storedSubscriptions = await listActiveStoredSubscriptions();
+  const subscriptions =
+    feedUrls?.length || storedSubscriptions.length > 0
+      ? storedSubscriptions
+      : await createSubscriptionProvider(normalizedFeedUrls, 'mock').listActiveSubscriptions();
+
   const syncService = createSyncService({
-    subscriptionProvider: createSubscriptionProvider(normalizedFeedUrls, feedUrls?.length ? 'manual' : 'mock'),
+    subscriptionProvider: createStaticSubscriptionProvider(subscriptions),
     feedParser: week2FeedParser,
     storage: getStorage()
   });
 
   const result = await syncService.syncAll();
-  return buildPayload({ result, feedUrls: normalizedFeedUrls });
+  return buildPayload({ result, feedUrls: subscriptions.map((subscription) => subscription.feedUrl) });
 }
 
 export async function importOpmlAndSync(opmlText: string): Promise<Week2FrontendSyncPayload> {
@@ -166,8 +220,23 @@ export async function importOpmlAndSync(opmlText: string): Promise<Week2Frontend
     throw new Error('The OPML file did not contain any valid http/https Feed URL.');
   }
 
+  await getStorage().saveFeeds(
+    parsed.subscriptions.map((subscription) => ({
+      id: 'auto',
+      title: subscription.title,
+      feedUrl: subscription.feedUrl,
+      siteUrl: subscription.siteUrl,
+      unreadCount: 0,
+      status: 'ready',
+      lastSyncedAt: undefined,
+      isEnabled: true
+    }))
+  );
+
+  const subscriptions = await listActiveStoredSubscriptions();
+
   const syncService = createSyncService({
-    subscriptionProvider: createSubscriptionProvider(feedUrls, 'opml'),
+    subscriptionProvider: createStaticSubscriptionProvider(subscriptions),
     feedParser: week2FeedParser,
     storage: getStorage()
   });
@@ -175,11 +244,57 @@ export async function importOpmlAndSync(opmlText: string): Promise<Week2Frontend
   const result = await syncService.syncAll();
   return buildPayload({
     result,
-    feedUrls,
+    feedUrls: subscriptions.map((subscription) => subscription.feedUrl),
     opml: {
       importedCount: parsed.subscriptions.length,
       skippedCount: parsed.issues.length,
       messages: parsed.issues.map((issue) => issue.message)
     }
   });
+}
+
+export async function previewOpmlImport(opmlText: string): Promise<Week2OpmlPreviewPayload> {
+  const parsed = parseOpmlText(opmlText);
+  return {
+    subscriptions: parsed.subscriptions,
+    skippedCount: parsed.issues.length,
+    messages: parsed.issues.map((issue) => issue.message)
+  };
+}
+
+export async function updateArticleState(input: {
+  articleId: string;
+  isRead?: boolean;
+  isStarred?: boolean;
+}): Promise<Week2FrontendSyncPayload> {
+  const storage = getStorage();
+  await storage.updateArticleState?.(input);
+  return buildPayload({
+    result: emptyResult(),
+    feedUrls: (await listActiveStoredSubscriptions()).map((subscription) => subscription.feedUrl)
+  });
+}
+
+export async function updateFeedSubscription(input: {
+  feedId: string;
+  isEnabled?: boolean;
+  isDeleted?: boolean;
+}): Promise<Week2FrontendSyncPayload> {
+  const storage = getStorage();
+  await storage.updateFeedSubscription?.(input);
+  return buildPayload({
+    result: emptyResult(),
+    feedUrls: (await listActiveStoredSubscriptions()).map((subscription) => subscription.feedUrl)
+  });
+}
+
+function emptyResult(): Week2SyncAllResult {
+  return {
+    status: 'succeeded',
+    totalSubscriptions: 0,
+    succeededCount: 0,
+    failedCount: 0,
+    totalSavedArticles: 0,
+    results: []
+  };
 }

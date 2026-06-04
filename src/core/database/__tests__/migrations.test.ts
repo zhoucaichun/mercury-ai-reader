@@ -25,11 +25,12 @@ describe('migrations', () => {
       .prepare('SELECT version, name FROM _migrations ORDER BY version')
       .all() as Array<{ version: number; name: string }>;
 
-    expect(rows).toHaveLength(4);
+    expect(rows).toHaveLength(5);
     expect(rows[0]).toEqual({ version: 1, name: 'createFeed' });
     expect(rows[1]).toEqual({ version: 2, name: 'createEntry' });
     expect(rows[2]).toEqual({ version: 3, name: 'createContent' });
     expect(rows[3]).toEqual({ version: 4, name: 'createAppSettings' });
+    expect(rows[4]).toEqual({ version: 5, name: 'addFeedEnabledColumn' });
   });
 
   it('is idempotent — second run does not re-apply migrations', () => {

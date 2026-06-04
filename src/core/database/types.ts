@@ -7,6 +7,7 @@ export interface Feed {
   description: string | null;
   feedParserVersion: number | null;
   lastFetchedAt: string | null;
+  isEnabled?: boolean;
   createdAt: string;
 }
 
@@ -384,6 +385,7 @@ export interface Week2Feed {
   unreadCount: number;
   status: Week2FeedStatus;
   lastSyncedAt?: ISODateString;
+  isEnabled?: boolean;
 }
 
 export interface Week2ParsedFeed {
@@ -459,6 +461,16 @@ export interface Week2StoragePort {
 
   saveArticleContent(content: Week2ArticleContent): Promise<Week2ArticleContent>;
   getArticleContent(articleId: string): Promise<Week2ArticleContent | null>;
+  updateArticleState?(input: {
+    articleId: string;
+    isRead?: boolean;
+    isStarred?: boolean;
+  }): Promise<Week2Article>;
+  updateFeedSubscription?(input: {
+    feedId: string;
+    isEnabled?: boolean;
+    isDeleted?: boolean;
+  }): Promise<void>;
 
   updateFeedSyncStatus(input: {
     feedId: string;

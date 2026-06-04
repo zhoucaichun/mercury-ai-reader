@@ -38,7 +38,7 @@ export function createWeek2StoragePort(db: Database.Database): Week2StoragePort 
         if (existing) {
           if (f.title) feedStore.update(existing.id, { title: f.title });
           if (f.siteUrl) feedStore.update(existing.id, { siteUrl: f.siteUrl });
-          results.push(mapFeedToWeek2(existing));
+          results.push(mapFeedToWeek2(existing, entryStore.getUnreadCount(existing.id)));
         } else {
           const created = feedStore.upsert({
             title: f.title ?? null,
@@ -47,8 +47,9 @@ export function createWeek2StoragePort(db: Database.Database): Week2StoragePort 
             description: null,
             feedParserVersion: null,
             lastFetchedAt: f.lastSyncedAt ?? null,
+            isEnabled: f.isEnabled ?? true,
           });
-          results.push(mapFeedToWeek2(created));
+          results.push(mapFeedToWeek2(created, entryStore.getUnreadCount(created.id)));
         }
       }
 
@@ -57,7 +58,7 @@ export function createWeek2StoragePort(db: Database.Database): Week2StoragePort 
 
     async listFeeds(): Promise<Week2Feed[]> {
       const feeds = feedStore.getAll();
-      return feeds.map(mapFeedToWeek2);
+      return feeds.map((feed) => mapFeedToWeek2(feed, entryStore.getUnreadCount(feed.id)));
     },
 
     async saveArticles(input: {
@@ -146,6 +147,43 @@ export function createWeek2StoragePort(db: Database.Database): Week2StoragePort 
       }));
     },
 
+    async updateArticleState(input: {
+      articleId: string;
+      isRead?: boolean;
+      isStarred?: boolean;
+    }): Promise<Week2Article> {
+      const entryId = Number(input.articleId);
+
+      if (input.isRead !== undefined) {
+        entryStore.markRead(entryId, input.isRead);
+      }
+
+      if (input.isStarred !== undefined) {
+        entryStore.markStarred(entryId, input.isStarred);
+      }
+
+      const entry = entryStore.getById(entryId);
+      if (!entry) throw new Error(`Article not found: ${input.articleId}`);
+      return mapEntryToWeek2Article(entry);
+    },
+
+    async updateFeedSubscription(input: {
+      feedId: string;
+      isEnabled?: boolean;
+      isDeleted?: boolean;
+    }): Promise<void> {
+      const feedId = Number(input.feedId);
+
+      if (input.isDeleted) {
+        feedStore.delete(feedId);
+        return;
+      }
+
+      if (input.isEnabled !== undefined) {
+        feedStore.setEnabled(feedId, input.isEnabled);
+      }
+    },
+
     async saveArticleContent(content: Week2ArticleContent): Promise<Week2ArticleContent> {
       const entryId = Number(content.articleId);
 
@@ -201,15 +239,23 @@ export function createWeek2StoragePort(db: Database.Database): Week2StoragePort 
 
 // ─── Mapping helpers ─────────────────────────────────────────
 
-function mapFeedToWeek2(feed: { id: number; title: string | null; feedUrl: string; siteUrl: string | null; lastFetchedAt: string | null }): Week2Feed {
+function mapFeedToWeek2(feed: {
+  id: number;
+  title: string | null;
+  feedUrl: string;
+  siteUrl: string | null;
+  lastFetchedAt: string | null;
+  isEnabled?: boolean | number;
+}, unreadCount = 0): Week2Feed {
   return {
     id: String(feed.id),
     title: feed.title ?? '',
     feedUrl: feed.feedUrl,
     siteUrl: feed.siteUrl ?? undefined,
-    unreadCount: 0, // TODO: compute from entryStore when needed
-    status: 'ready' as Week2FeedStatus,
+    unreadCount,
+    status: feed.isEnabled === false || feed.isEnabled === 0 ? 'error' as Week2FeedStatus : 'ready' as Week2FeedStatus,
     lastSyncedAt: feed.lastFetchedAt ?? undefined,
+    isEnabled: feed.isEnabled !== false && feed.isEnabled !== 0,
   };
 }
 
@@ -232,7 +278,7 @@ function mapEntryToWeek2Article(entry: {
     author: entry.author ?? undefined,
     excerpt: entry.summary ?? '',
     publishedAt: entry.publishedAt ?? undefined,
-    readState: entry.isRead ? 'saved' as const : 'unread' as const,
+    readState: entry.isStarred ? 'saved' as const : entry.isRead ? 'reading' as const : 'unread' as const,
     estimatedMinutes: Math.max(1, Math.round((entry.summary?.length ?? 0) / 200)),
     tags: [],
   };

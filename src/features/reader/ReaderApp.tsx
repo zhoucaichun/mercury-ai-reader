@@ -19,6 +19,7 @@ import {
   Search,
   Settings,
   Sparkles,
+  Star,
   Trash2,
   Wifi
 } from 'lucide-react';
@@ -132,23 +133,39 @@ function FeedStatusBadge({ status }: { status: FeedStatus }) {
 function FeedRow({
   feed,
   selected,
-  onSelect
+  onSelect,
+  onToggleEnabled,
+  onDelete
 }: {
   feed: Feed;
   selected: boolean;
   onSelect: () => void;
+  onToggleEnabled: () => void;
+  onDelete: () => void;
 }) {
+  const status = feed.isEnabled === false ? 'error' : feed.status;
+
   return (
-    <button className={`feed-row ${selected ? 'is-selected' : ''}`} type="button" onClick={onSelect}>
-      <span className="feed-row-main">
-        <span className="feed-title">{feed.title}</span>
-        <span className="feed-meta">{formatDate(feed.lastSyncedAt)}</span>
+    <div className={`feed-row ${selected ? 'is-selected' : ''} ${feed.isEnabled === false ? 'is-disabled-feed' : ''}`}>
+      <button className="feed-row-select" type="button" onClick={onSelect}>
+        <span className="feed-row-main">
+          <span className="feed-title">{feed.title}</span>
+          <span className="feed-meta">{formatDate(feed.lastSyncedAt)}</span>
+        </span>
+        <span className="feed-row-side">
+          <span className="unread-count">{feed.unreadCount}</span>
+          <FeedStatusBadge status={status} />
+        </span>
+      </button>
+      <span className="feed-row-tools">
+        <button className="mini-button" type="button" onClick={onToggleEnabled}>
+          {feed.isEnabled === false ? 'Enable' : 'Disable'}
+        </button>
+        <button className="mini-button is-danger" type="button" onClick={onDelete}>
+          Delete
+        </button>
       </span>
-      <span className="feed-row-side">
-        <span className="unread-count">{feed.unreadCount}</span>
-        <FeedStatusBadge status={feed.status} />
-      </span>
-    </button>
+    </div>
   );
 }
 
@@ -214,6 +231,9 @@ export function ReaderApp() {
   const [contentStatus, setContentStatus] = useState<'idle' | 'loading' | 'ready' | 'empty' | 'error'>('idle');
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [syncMessage, setSyncMessage] = useState('Using local mock reader data');
+  const [opmlSummary, setOpmlSummary] = useState<{ importedCount: number; skippedCount: number; messages: string[] } | null>(
+    null
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -327,6 +347,7 @@ export function ReaderApp() {
     setSyncMessage(
       `Synced ${payload.result.totalSubscriptions} feed(s), saved ${payload.result.totalSavedArticles} article(s).${opmlPart}${storagePart}`
     );
+    setOpmlSummary(payload.opml ?? null);
   }
 
   async function handleRunWeek2Sync() {
@@ -370,6 +391,31 @@ export function ReaderApp() {
     } catch (error) {
       setSyncStatus('failed');
       setSyncMessage(error instanceof Error ? error.message : 'OPML import failed.');
+    }
+  }
+
+  async function handleArticleStateChange(input: { isRead?: boolean; isStarred?: boolean }) {
+    if (!selectedArticle || !runtime?.updateArticleState) return;
+
+    try {
+      const payload = await runtime.updateArticleState({ articleId: selectedArticle.id, ...input });
+      applySyncPayload(payload);
+    } catch (error) {
+      setSyncStatus('failed');
+      setSyncMessage(error instanceof Error ? error.message : 'Article state update failed.');
+    }
+  }
+
+  async function handleFeedSubscriptionChange(feed: Feed, input: { isEnabled?: boolean; isDeleted?: boolean }) {
+    if (!runtime?.updateFeedSubscription) return;
+
+    try {
+      const payload = await runtime.updateFeedSubscription({ feedId: feed.id, ...input });
+      applySyncPayload(payload);
+      setSyncMessage(input.isDeleted ? `Deleted subscription: ${feed.title}` : `Updated subscription: ${feed.title}`);
+    } catch (error) {
+      setSyncStatus('failed');
+      setSyncMessage(error instanceof Error ? error.message : 'Subscription update failed.');
     }
   }
 
@@ -434,6 +480,20 @@ export function ReaderApp() {
 
         <div className={`sync-message sync-message-${syncStatus}`}>{syncMessage}</div>
 
+        {opmlSummary ? (
+          <div className="opml-summary">
+            <strong>OPML import</strong>
+            <span>
+              {opmlSummary.importedCount} imported · {opmlSummary.skippedCount} skipped
+            </span>
+            {opmlSummary.messages.slice(0, 3).map((message) => (
+              <span className="opml-message" key={message}>
+                {message}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         <label className="search-box">
           <Search size={17} aria-hidden="true" />
           <input
@@ -455,6 +515,8 @@ export function ReaderApp() {
               key={feed.id}
               selected={feed.id === selectedFeedId}
               onSelect={() => handleFeedSelect(feed.id)}
+              onToggleEnabled={() => void handleFeedSubscriptionChange(feed, { isEnabled: feed.isEnabled === false })}
+              onDelete={() => void handleFeedSubscriptionChange(feed, { isDeleted: true })}
             />
           ))}
         </div>
@@ -511,6 +573,22 @@ export function ReaderApp() {
                   <ExternalLink size={17} aria-hidden="true" />
                   Source
                 </a>
+                <button
+                  className="tool-button"
+                  type="button"
+                  onClick={() => void handleArticleStateChange({ isRead: selectedArticle.readState === 'unread' })}
+                >
+                  <CheckCircle2 size={17} aria-hidden="true" />
+                  {selectedArticle.readState === 'unread' ? 'Mark Read' : 'Unread'}
+                </button>
+                <button
+                  className="tool-button"
+                  type="button"
+                  onClick={() => void handleArticleStateChange({ isStarred: selectedArticle.readState !== 'saved' })}
+                >
+                  <Star size={17} aria-hidden="true" />
+                  {selectedArticle.readState === 'saved' ? 'Unsave' : 'Save'}
+                </button>
                 <button
                   className={activePanel === 'summary' ? 'tool-button is-active' : 'tool-button'}
                   type="button"

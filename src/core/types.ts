@@ -18,6 +18,7 @@ export type Week2Feed = {
   unreadCount: number;
   status: Week2FeedStatus;
   lastSyncedAt?: ISODateString;
+  isEnabled?: boolean;
 };
 
 export type Week2Article = {

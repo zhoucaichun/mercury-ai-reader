@@ -16,6 +16,7 @@ function createFeedTable(db: Database.Database): void {
       description TEXT,
       feedParserVersion INTEGER,
       lastFetchedAt TEXT,
+      isEnabled INTEGER NOT NULL DEFAULT 1,
       createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_feed_feedUrl ON feed(feedUrl);
@@ -79,11 +80,19 @@ function createAppSettingsTable(db: Database.Database): void {
   `);
 }
 
+function addFeedEnabledColumn(db: Database.Database): void {
+  const columns = db.prepare('PRAGMA table_info(feed)').all() as Array<{ name: string }>;
+  if (!columns.some((column) => column.name === 'isEnabled')) {
+    db.exec('ALTER TABLE feed ADD COLUMN isEnabled INTEGER NOT NULL DEFAULT 1');
+  }
+}
+
 const migrations: Migration[] = [
   { version: 1, name: 'createFeed', up: createFeedTable },
   { version: 2, name: 'createEntry', up: createEntryTable },
   { version: 3, name: 'createContent', up: createContentTable },
   { version: 4, name: 'createAppSettings', up: createAppSettingsTable },
+  { version: 5, name: 'addFeedEnabledColumn', up: addFeedEnabledColumn },
 ];
 
 export function runMigrations(db: Database.Database): void {

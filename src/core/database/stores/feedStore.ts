@@ -12,12 +12,13 @@ export interface IFeedStore {
   getByUrl(feedUrl: string): Feed | null;
   upsertMany(feeds: FeedInsert[]): Feed[];
   updateLastFetchedAt(feedId: number, lastFetchedAt: string): void;
+  setEnabled(feedId: number, isEnabled: boolean): void;
 }
 
 export function createFeedStore(db: Database.Database): IFeedStore {
   const upsertStmt = db.prepare(`
-    INSERT INTO feed (title, feedUrl, siteUrl, description, feedParserVersion, lastFetchedAt)
-    VALUES (@title, @feedUrl, @siteUrl, @description, @feedParserVersion, @lastFetchedAt)
+    INSERT INTO feed (title, feedUrl, siteUrl, description, feedParserVersion, lastFetchedAt, isEnabled)
+    VALUES (@title, @feedUrl, @siteUrl, @description, @feedParserVersion, @lastFetchedAt, @isEnabled)
     ON CONFLICT(feedUrl) DO UPDATE SET
       title = excluded.title,
       siteUrl = excluded.siteUrl,
@@ -33,6 +34,7 @@ export function createFeedStore(db: Database.Database): IFeedStore {
   const updateLastFetchedStmt = db.prepare(
     `UPDATE feed SET lastFetchedAt = ? WHERE id = ?`,
   );
+  const setEnabledStmt = db.prepare('UPDATE feed SET isEnabled = ? WHERE id = ?');
 
   function update(feedId: number, partial: Partial<Omit<Feed, 'id' | 'createdAt'>>): Feed {
     const sets: string[] = [];
@@ -65,6 +67,7 @@ export function createFeedStore(db: Database.Database): IFeedStore {
         description: feed.description ?? null,
         feedParserVersion: feed.feedParserVersion ?? null,
         lastFetchedAt: feed.lastFetchedAt ?? null,
+        isEnabled: feed.isEnabled === false ? 0 : 1,
       });
 
       return getByUrlStmt.get(feed.feedUrl) as Feed;
@@ -96,9 +99,10 @@ export function createFeedStore(db: Database.Database): IFeedStore {
             title: feed.title ?? null,
             feedUrl: feed.feedUrl,
             siteUrl: feed.siteUrl ?? null,
-            description: feed.description ?? null,
-            feedParserVersion: feed.feedParserVersion ?? null,
-            lastFetchedAt: feed.lastFetchedAt ?? null,
+          description: feed.description ?? null,
+          feedParserVersion: feed.feedParserVersion ?? null,
+          lastFetchedAt: feed.lastFetchedAt ?? null,
+          isEnabled: feed.isEnabled === false ? 0 : 1,
           });
           results.push(getByUrlStmt.get(feed.feedUrl) as Feed);
         }
@@ -108,6 +112,10 @@ export function createFeedStore(db: Database.Database): IFeedStore {
 
     updateLastFetchedAt(feedId: number, lastFetchedAt: string): void {
       updateLastFetchedStmt.run(lastFetchedAt, feedId);
+    },
+
+    setEnabled(feedId: number, isEnabled: boolean): void {
+      setEnabledStmt.run(isEnabled ? 1 : 0, feedId);
     },
   };
 }

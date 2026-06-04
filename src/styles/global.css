@@ -219,6 +219,24 @@ button {
   border-color: #dccb98;
 }
 
+.opml-summary {
+  display: grid;
+  gap: 5px;
+  padding: 10px 11px;
+  color: #2f4843;
+  background: #fbfaf7;
+  border: 1px solid #ded9cc;
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+.opml-message {
+  overflow: hidden;
+  color: #68736f;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .spin-icon {
   animation: spin-icon 900ms linear infinite;
 }
@@ -237,6 +255,7 @@ button {
 }
 
 .feed-row,
+.feed-row-select,
 .article-row {
   width: 100%;
   min-width: 0;
@@ -248,11 +267,45 @@ button {
 }
 
 .feed-row {
+  display: grid;
+  gap: 9px;
+  min-height: 96px;
+  padding: 10px;
+}
+
+.feed-row-select {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  min-height: 76px;
-  padding: 12px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.feed-row-tools {
+  display: flex;
+  gap: 8px;
+}
+
+.mini-button {
+  min-height: 27px;
+  padding: 0 9px;
+  color: #2f4843;
+  background: #e4ece8;
+  border: 1px solid #c7d8d2;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mini-button.is-danger {
+  color: #873638;
+  background: #f1d8d4;
+  border-color: #e7b8b2;
+}
+
+.feed-row.is-disabled-feed {
+  opacity: 0.72;
 }
 
 .feed-row.is-selected,
