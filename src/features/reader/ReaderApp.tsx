@@ -311,6 +311,9 @@ export function ReaderApp() {
   }, [dataPort, selectedArticleId]);
 
   const selectedArticle = articles.find((article) => article.id === selectedArticleId);
+  const selectedArticleState = selectedArticle as (typeof selectedArticle & { isRead?: boolean; isStarred?: boolean });
+  const selectedArticleIsRead = Boolean(selectedArticleState?.isRead ?? selectedArticleState?.readState !== 'unread');
+  const selectedArticleIsStarred = Boolean(selectedArticleState?.isStarred ?? selectedArticleState?.readState === 'saved');
   const selectedFeed = feeds.find((feed) => feed.id === selectedFeedId);
   const feedTitleById = useMemo(() => new Map(feeds.map((feed) => [feed.id, feed.title])), [feeds]);
   const runtime = window.mercury;
@@ -581,18 +584,18 @@ export function ReaderApp() {
                 <button
                   className="tool-button"
                   type="button"
-                  onClick={() => void handleArticleStateChange({ isRead: selectedArticle.readState === 'unread' })}
+                  onClick={() => void handleArticleStateChange({ isRead: !selectedArticleIsRead })}
                 >
                   <CheckCircle2 size={17} aria-hidden="true" />
-                  {selectedArticle.readState === 'unread' ? 'Mark Read' : 'Unread'}
+                  {selectedArticleIsRead ? 'Unread' : 'Mark Read'}
                 </button>
                 <button
                   className="tool-button"
                   type="button"
-                  onClick={() => void handleArticleStateChange({ isStarred: selectedArticle.readState !== 'saved' })}
+                  onClick={() => void handleArticleStateChange({ isStarred: !selectedArticleIsStarred })}
                 >
                   <Star size={17} aria-hidden="true" />
-                  {selectedArticle.readState === 'saved' ? 'Unsave' : 'Save'}
+                  {selectedArticleIsStarred ? 'Unsave' : 'Save'}
                 </button>
                 <button
                   className={activePanel === 'summary' ? 'tool-button is-active' : 'tool-button'}

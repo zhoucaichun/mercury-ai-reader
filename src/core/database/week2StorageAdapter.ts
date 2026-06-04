@@ -278,7 +278,9 @@ function mapEntryToWeek2Article(entry: {
     author: entry.author ?? undefined,
     excerpt: entry.summary ?? '',
     publishedAt: entry.publishedAt ?? undefined,
-    readState: entry.isStarred ? 'saved' as const : entry.isRead ? 'reading' as const : 'unread' as const,
+    readState: entry.isRead ? 'reading' as const : 'unread' as const,
+    isRead: entry.isRead,
+    isStarred: entry.isStarred,
     estimatedMinutes: Math.max(1, Math.round((entry.summary?.length ?? 0) / 200)),
     tags: [],
   };

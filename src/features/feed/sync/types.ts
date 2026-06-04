@@ -77,6 +77,8 @@ export interface Week2Article {
   excerpt: string;
   publishedAt?: ISODateString;
   readState: Week2ArticleReadState;
+  isRead?: boolean;
+  isStarred?: boolean;
   estimatedMinutes: number;
   tags: string[];
 }

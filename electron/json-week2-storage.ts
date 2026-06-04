@@ -112,6 +112,8 @@ export function createJsonWeek2StoragePort(userDataPath: string): Week2StoragePo
           excerpt: article.summary ?? article.contentText ?? '',
           publishedAt: article.publishedAt,
           readState: 'unread',
+          isRead: false,
+          isStarred: false,
           estimatedMinutes: Math.max(1, Math.round((article.contentText?.length ?? article.summary?.length ?? 200) / 500)),
           tags: article.tags ?? []
         };
@@ -171,8 +173,11 @@ export function createJsonWeek2StoragePort(userDataPath: string): Week2StoragePo
       const state = readState();
       const article = state.articles.find((item) => item.id === input.articleId);
       if (!article) throw new Error(`Article not found: ${input.articleId}`);
-      if (input.isStarred !== undefined) article.readState = input.isStarred ? 'saved' : 'unread';
-      if (input.isRead !== undefined && article.readState !== 'saved') article.readState = input.isRead ? 'reading' : 'unread';
+      if (input.isStarred !== undefined) article.isStarred = input.isStarred;
+      if (input.isRead !== undefined) {
+        article.isRead = input.isRead;
+        article.readState = input.isRead ? 'reading' : 'unread';
+      }
       writeState(state);
       return article;
     },
