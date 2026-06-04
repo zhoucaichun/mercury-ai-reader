@@ -356,20 +356,8 @@ Completed main-chain items include:
 Week 3 must no longer reopen the main chain as a large task. The next integration focus is:
 
 ```text
-AI Features -> Usage Record -> Markdown Export -> Final UI wiring
+AI Features -> Agent Runtime -> Provider -> Usage Record -> Markdown Export -> Final UI wiring
 ```
-
-Week 3 scope:
-
-- Summary must use the current article `canonicalMarkdown` as input;
-- Translation must use the current article `canonicalMarkdown` as input;
-- Summary and Translation must call Agent Runtime, not direct model APIs;
-- Agent Runtime must call the unified Provider interface;
-- Provider must support Mock Provider fallback and OpenAI-compatible configuration;
-- each AI call must generate a Usage event;
-- Usage UI must display recent AI calls and basic token statistics;
-- Export must export the current article as one Markdown file;
-- Export content should include title, source URL, canonical Markdown, and available Summary / Translation results when present.
 
 Week 3 branch rule:
 
@@ -388,6 +376,303 @@ git pull origin main
 git switch -c feature/TX-week3-topic
 ```
 
+All Week 3 modules must use the following public contracts. Do not create another naming style for the same fields.
+
+```ts
+export type Week3ISODateString = string;
+
+export interface Week3AgentArticleInput {
+  articleId: string;
+  contentId?: string;
+  title: string;
+  sourceUrl: string;
+  feedTitle?: string;
+  author?: string;
+  publishedAt?: Week3ISODateString;
+  canonicalMarkdown: string;
+}
+```
+
+Agent Runtime contract:
+
+```ts
+export type Week3AgentType = "summary" | "translation";
+
+export type Week3AgentStatus =
+  | "idle"
+  | "queued"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "cancelled";
+
+export type Week3PersistedAgentStatus =
+  | "queued"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "cancelled";
+
+export type Week3AgentErrorCode =
+  | "provider_error"
+  | "network_error"
+  | "prompt_error"
+  | "timeout"
+  | "cancelled"
+  | "unknown_error";
+
+export interface Week3RuntimeUsage {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  estimated?: boolean;
+}
+
+export interface Week3RuntimeLLMResult {
+  content: string;
+  providerId: string;
+  providerName: string;
+  model: string;
+  usage?: Week3RuntimeUsage;
+  raw?: unknown;
+}
+
+export interface Week3AgentRunInput<TInput = Record<string, unknown>> {
+  taskId: string;
+  agentType: Week3AgentType;
+  templateId: "summary.default" | "translation.default" | string;
+  input: TInput;
+  providerId: string;
+  providerName?: string;
+  model: string;
+  metadata?: Record<string, unknown>;
+  signal?: AbortSignal;
+}
+
+export interface Week3AgentRunResult<TOutput = Week3RuntimeLLMResult> {
+  taskId: string;
+  status: "succeeded" | "failed" | "cancelled";
+  output?: TOutput;
+  errorCode?: Week3AgentErrorCode;
+  errorMessage?: string;
+}
+
+export interface Week3AgentRuntime {
+  runAgent<TInput, TOutput = Week3RuntimeLLMResult>(
+    input: Week3AgentRunInput<TInput>
+  ): Promise<Week3AgentRunResult<TOutput>>;
+}
+```
+
+Prompt template contract:
+
+```text
+resources/prompts/summary.default.yaml
+resources/prompts/translation.default.yaml
+```
+
+Prompt variables must come from `Week3AgentArticleInput` plus the agent-specific request fields below. Prompt text must not be hardcoded inside Summary or Translation business functions.
+
+Provider contract:
+
+```ts
+export type Week3LLMPurpose =
+  | "summary"
+  | "translation"
+  | "connection-test"
+  | "other";
+
+export type Week3LLMProviderKind = "openai-compatible" | "mock";
+
+export interface Week3LLMProviderConfig {
+  providerId: string;
+  providerName: string;
+  kind: Week3LLMProviderKind;
+  baseUrl: string;
+  model: string;
+  apiKey?: string;
+  apiKeyEnv?: string;
+  enabled?: boolean;
+  timeoutMs?: number;
+}
+
+export interface Week3LLMChatRequest {
+  purpose: Week3LLMPurpose;
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+  metadata?: Record<string, unknown>;
+  signal?: AbortSignal;
+}
+
+export interface Week3LLMChatResponse {
+  id?: string;
+  providerId: string;
+  providerName: string;
+  model: string;
+  content: string;
+  usage?: Week3RuntimeUsage;
+  status: "succeeded";
+  latencyMs: number;
+  raw?: unknown;
+}
+
+export interface Week3LLMConnectionTestResult {
+  providerId: string;
+  providerName: string;
+  model: string;
+  status: "succeeded" | "failed";
+  latencyMs?: number;
+  errorMessage?: string;
+}
+
+export interface Week3LLMProvider {
+  readonly config: Week3LLMProviderConfig;
+  chat(request: Week3LLMChatRequest): Promise<Week3LLMChatResponse>;
+  testConnection?(signal?: AbortSignal): Promise<Week3LLMConnectionTestResult>;
+}
+```
+
+All model calls must use:
+
+```ts
+provider.chat(request);
+response.content;
+```
+
+Usage event contract:
+
+```ts
+export interface Week3LLMUsageEvent {
+  id: string;
+  purpose: Week3LLMPurpose;
+  providerId: string;
+  providerName: string;
+  model: string;
+  status: "succeeded" | "failed";
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  estimated?: boolean;
+  startedAt?: Week3ISODateString;
+  finishedAt?: Week3ISODateString;
+  latencyMs?: number;
+  errorMessage?: string;
+  requestId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface Week3LLMUsageSummary {
+  totalCalls: number;
+  succeededCalls: number;
+  failedCalls: number;
+  totalTokens: number;
+  estimatedTokens: number;
+  byPurpose: Array<{ purpose: Week3LLMPurpose; calls: number; totalTokens: number }>;
+  byProvider: Array<{ providerId: string; providerName: string; calls: number; totalTokens: number }>;
+  byModel: Array<{ model: string; calls: number; totalTokens: number }>;
+  recent: Week3LLMUsageEvent[];
+}
+```
+
+Where available, `metadata` should include `taskId`, `articleId`, `contentId`, and `agentType`. Do not add separate top-level fields unless T2 updates the storage contract.
+
+Summary contract:
+
+```ts
+export type Week3SummaryDetailLevel = "brief" | "standard";
+
+export interface Week3SummaryRequest extends Week3AgentArticleInput {
+  targetLanguage: "zh-CN" | "en-US" | string;
+  detailLevel: Week3SummaryDetailLevel;
+  regenerate?: boolean;
+}
+
+export interface Week3SummaryResult {
+  id: string;
+  articleId: string;
+  contentId?: string;
+  taskId: string;
+  targetLanguage: string;
+  detailLevel: Week3SummaryDetailLevel;
+  markdown: string;
+  providerId: string;
+  providerName: string;
+  model: string;
+  createdAt: Week3ISODateString;
+  updatedAt: Week3ISODateString;
+}
+```
+
+Translation contract:
+
+```ts
+export interface Week3TranslationRequest extends Week3AgentArticleInput {
+  targetLanguage: string;
+  sourceLanguage?: string;
+  regenerate?: boolean;
+}
+
+export interface Week3TranslationResult {
+  id: string;
+  articleId: string;
+  contentId?: string;
+  taskId: string;
+  targetLanguage: string;
+  sourceLanguage?: string;
+  markdown: string;
+  providerId: string;
+  providerName: string;
+  model: string;
+  createdAt: Week3ISODateString;
+  updatedAt: Week3ISODateString;
+}
+```
+
+Single article Markdown export contract:
+
+```ts
+export interface Week3MarkdownExportData {
+  title: string;
+  url: string;
+  author?: string;
+  publishedAt?: Week3ISODateString;
+  feedTitle?: string;
+  canonicalMarkdown: string;
+  summaryMarkdown?: string;
+  translationMarkdown?: string;
+  exportedAt?: Week3ISODateString;
+}
+
+export interface Week3MarkdownExportFile {
+  fileName: string;
+  markdown: string;
+}
+```
+
+Reader UI integration port:
+
+```ts
+export interface Week3AgentUiPort {
+  generateSummary(request: Week3SummaryRequest): Promise<Week3SummaryResult>;
+  translateArticle(request: Week3TranslationRequest): Promise<Week3TranslationResult>;
+  listUsageEvents?(): Promise<Week3LLMUsageEvent[]>;
+  getUsageSummary?(): Promise<Week3LLMUsageSummary>;
+  exportCurrentArticle(data: Week3MarkdownExportData): Promise<Week3MarkdownExportFile>;
+}
+```
+
+Week 3 module responsibilities:
+
+- T2 provides or maps storage for `Week3SummaryResult`, `Week3TranslationResult`, Agent task runs, and `Week3LLMUsageEvent`;
+- T6 guarantees the selected article can provide non-empty `canonicalMarkdown`;
+- T7 calls the AI / Export functions through `Week3AgentUiPort` and displays status / results / usage;
+- T8 implements `Week3AgentRuntime`, prompt loading, prompt rendering, status, error, cancel, and retry behavior;
+- T9 implements `Week3LLMProvider`, mock provider fallback, OpenAI-compatible provider config, usage event creation, and usage summary;
+- T10 implements Summary using `Week3SummaryRequest` and `Week3SummaryResult`;
+- T11 implements Translation and single article Markdown Export using the contracts above.
+
 Week 3 acceptance criteria:
 
 - `npm test` passes;
@@ -395,7 +680,11 @@ Week 3 acceptance criteria:
 - `npm run smoke:week2` still passes;
 - packaged Windows zip can still be generated;
 - Reader UI can still add/sync Feed, import OPML, show articles, mark read/save, enable/disable/delete subscriptions;
-- Summary / Translation / Usage / Export have at least MVP callable flows or clearly marked mock fallback.
+- Summary can run from the selected real article and display Markdown result, with mock fallback allowed;
+- Translation can run from the selected real article and display Markdown result, with mock fallback allowed;
+- every Summary / Translation call creates a usage event;
+- Usage UI can display recent calls and basic token statistics;
+- Export can produce one Markdown file for the current article, including title, source URL, `canonicalMarkdown`, and available Summary / Translation results.
 
 ## 6. Agent Runtime Rules
 
