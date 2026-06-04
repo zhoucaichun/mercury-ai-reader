@@ -340,6 +340,54 @@ Week 2 集成验收要求：
 - T5 或集成分支必须在 `package.json` 提供可运行的 `npm run smoke:week2`，用于执行 `syncAll()` 并输出 feeds / articles / articleContent 的数量和首篇文章信息；
 - 各模块可以内部使用 mock adapter，但对外函数名、字段名和返回结构必须完全符合本节接口，保证组长可以直接联调测试。
 
+## 5B. Week 3 AI / Export / Usage Integration Contract
+
+As of the latest `main`, the Feed / OPML / Sync / SQLite / Reader Pipeline / Article List main chain has been completed for MVP integration.
+
+Week 3 must no longer reopen the main chain as a large task. The next integration focus is:
+
+```text
+AI Features -> Usage Record -> Markdown Export -> Final UI wiring
+```
+
+Week 3 scope:
+
+- Summary must use the current article `canonicalMarkdown` as input;
+- Translation must use the current article `canonicalMarkdown` as input;
+- Summary and Translation must call Agent Runtime, not direct model APIs;
+- Agent Runtime must call the unified Provider interface;
+- Provider must support Mock Provider fallback and OpenAI-compatible configuration;
+- each AI call must generate a Usage event;
+- Usage UI must display recent AI calls and basic token statistics;
+- Export must export the current article as one Markdown file;
+- Export content should include title, source URL, canonical Markdown, and available Summary / Translation results when present.
+
+Week 3 branch rule:
+
+```text
+Every member must start from the latest main.
+Do not continue Week 1 / Week 2 old branches.
+Do not merge old branches back into Week 3 branches.
+If old useful code exists, manually migrate only the necessary files in your own module.
+```
+
+Recommended commands:
+
+```bash
+git switch main
+git pull origin main
+git switch -c feature/TX-week3-topic
+```
+
+Week 3 acceptance criteria:
+
+- `npm test` passes;
+- `npm run build` passes;
+- `npm run smoke:week2` still passes;
+- packaged Windows zip can still be generated;
+- Reader UI can still add/sync Feed, import OPML, show articles, mark read/save, enable/disable/delete subscriptions;
+- Summary / Translation / Usage / Export have at least MVP callable flows or clearly marked mock fallback.
+
 ## 6. Agent Runtime Rules
 
 Agent Runtime 是 Summary 和 Translation 共用的 AI 任务运行层。
