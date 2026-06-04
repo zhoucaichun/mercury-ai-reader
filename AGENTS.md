@@ -344,6 +344,15 @@ Week 2 集成验收要求：
 
 As of the latest `main`, the Feed / OPML / Sync / SQLite / Reader Pipeline / Article List main chain has been completed for MVP integration.
 
+Completed main-chain items include:
+
+- SQLite query, upsert, article dedupe, and unread count;
+- read / saved article state;
+- OPML import result display;
+- subscription enable / disable / delete;
+- real Feed sync from Reader UI through Electron IPC;
+- persisted article content with `canonicalMarkdown`.
+
 Week 3 must no longer reopen the main chain as a large task. The next integration focus is:
 
 ```text
