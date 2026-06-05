@@ -326,9 +326,11 @@ export function ReaderApp() {
 
   function applySyncPayload(payload: Awaited<ReturnType<NonNullable<typeof runtime>['runWeek2Sync']>>) {
     const nextDataPort = createSnapshotReaderDataPort(payload);
-    const nextFeedId = payload.feeds[0]?.id ?? '';
+    const nextFeedId = payload.feeds.some((feed) => feed.id === selectedFeedId) ? selectedFeedId : payload.feeds[0]?.id ?? '';
     const nextArticles = payload.articles.filter((article) => !nextFeedId || article.feedId === nextFeedId);
-    const nextArticleId = nextArticles[0]?.id ?? payload.articles[0]?.id ?? '';
+    const nextArticleId = nextArticles.some((article) => article.id === selectedArticleId)
+      ? selectedArticleId
+      : nextArticles[0]?.id ?? payload.articles[0]?.id ?? '';
     const nextContent = payload.contents.find((content) => content.articleId === nextArticleId) ?? null;
 
     setDataPort(() => nextDataPort);
@@ -629,7 +631,12 @@ export function ReaderApp() {
                   <Settings size={17} aria-hidden="true" />
                   Settings
                 </button>
-                <button className="tool-button" type="button" onClick={() => downloadMarkdown(selectedArticle, selectedContent)}>
+                <button
+                  className="tool-button"
+                  type="button"
+                  disabled={!selectedContent?.canonicalMarkdown}
+                  onClick={() => downloadMarkdown(selectedArticle, selectedContent)}
+                >
                   <Download size={17} aria-hidden="true" />
                   Export
                 </button>
