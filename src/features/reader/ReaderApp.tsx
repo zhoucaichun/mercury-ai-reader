@@ -23,7 +23,6 @@ import {
   Trash2,
   Wifi
 } from 'lucide-react';
-import { mockDataset } from '../../core/mockData';
 import type {
   AgentRunStatus,
   AgentTaskType,
@@ -33,7 +32,6 @@ import type {
   FeedStatus,
   Week2ReaderDataPort
 } from '../../core/types';
-import { mockWeek2ReaderDataPort } from './index';
 
 type ActivePanel = AgentTaskType | 'usage' | 'settings';
 type FontSizeSetting = 'small' | 'medium' | 'large';
@@ -59,6 +57,20 @@ const agentStatusLabels: Record<AgentRunStatus, string> = {
   succeeded: 'succeeded',
   failed: 'failed',
   cancelled: 'cancelled'
+};
+
+const emptyReaderDataPort: Week2ReaderDataPort = {
+  async listFeeds() {
+    return [];
+  },
+
+  async listArticles() {
+    return [];
+  },
+
+  async getArticleContent() {
+    return null;
+  }
 };
 
 function formatDate(value?: string) {
@@ -180,13 +192,23 @@ function ArticleRow({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const articleState = article as typeof article & { isRead?: boolean; isStarred?: boolean };
+  const isRead = Boolean(articleState.isRead ?? articleState.readState !== 'unread');
+  const isStarred = Boolean(articleState.isStarred ?? articleState.readState === 'saved');
+
   return (
-    <button className={`article-row ${selected ? 'is-selected' : ''}`} type="button" onClick={onSelect}>
+    <button
+      className={`article-row ${selected ? 'is-selected' : ''} ${isRead ? 'is-read' : 'is-unread'} ${isStarred ? 'is-starred' : ''}`}
+      type="button"
+      onClick={onSelect}
+    >
       <span className="article-row-header">
-        <span className={`read-dot read-dot-${article.readState}`} />
+        <span className={`read-dot ${isRead ? 'read-dot-reading' : 'read-dot-unread'}`} />
         <span>{sourceName}</span>
         <span>{formatDate(article.publishedAt)}</span>
         <span>{article.estimatedMinutes} min</span>
+        <span className={`article-state-badge ${isRead ? 'is-read' : 'is-unread'}`}>{isRead ? 'Read' : 'Unread'}</span>
+        {isStarred ? <span className="article-state-badge is-starred">Saved</span> : null}
       </span>
       <span className="article-row-title">{article.title}</span>
       <span className="article-row-excerpt">{article.excerpt}</span>
@@ -215,7 +237,7 @@ function EmptyState({ message }: { message: string }) {
 }
 
 export function ReaderApp() {
-  const [dataPort, setDataPort] = useState<Week2ReaderDataPort>(() => mockWeek2ReaderDataPort);
+  const [dataPort, setDataPort] = useState<Week2ReaderDataPort>(() => emptyReaderDataPort);
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedFeedId, setSelectedFeedId] = useState('');
@@ -230,7 +252,7 @@ export function ReaderApp() {
   const [articlesStatus, setArticlesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [contentStatus, setContentStatus] = useState<'idle' | 'loading' | 'ready' | 'empty' | 'error'>('idle');
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
-  const [syncMessage, setSyncMessage] = useState('Using local mock reader data');
+  const [syncMessage, setSyncMessage] = useState('Add a Feed URL, import OPML, or sync the default real feeds.');
   const [opmlSummary, setOpmlSummary] = useState<{ importedCount: number; skippedCount: number; messages: string[] } | null>(
     null
   );
@@ -317,7 +339,6 @@ export function ReaderApp() {
   const selectedFeed = feeds.find((feed) => feed.id === selectedFeedId);
   const feedTitleById = useMemo(() => new Map(feeds.map((feed) => [feed.id, feed.title])), [feeds]);
   const runtime = window.mercury;
-  const usageTotal = mockDataset.usageEvents.reduce((total, event) => total + event.totalTokens, 0);
   const readerClassName = `reader-content reader-font-${fontSize} reader-line-${lineHeight}`;
 
   function handleFeedSelect(feedId: string) {
@@ -371,7 +392,7 @@ export function ReaderApp() {
     const feedUrls = feedUrl ? [feedUrl] : undefined;
 
     setSyncStatus('running');
-    setSyncMessage(feedUrl ? 'Syncing the entered Feed URL...' : 'Syncing two real demo Feed URLs...');
+    setSyncMessage(feedUrl ? 'Syncing the entered Feed URL...' : 'Syncing the default real Feed sources...');
     setFeeds((currentFeeds) => currentFeeds.map((feed) => ({ ...feed, status: 'syncing' })));
 
     try {
@@ -481,7 +502,7 @@ export function ReaderApp() {
           <Wifi size={17} aria-hidden="true" />
           <input
             aria-label="Feed URL"
-            placeholder="Feed URL, empty uses demo feeds"
+            placeholder="Feed URL, empty uses default feeds"
             type="url"
             value={feedUrlInput}
             onChange={(event) => setFeedUrlInput(event.target.value)}
@@ -518,7 +539,9 @@ export function ReaderApp() {
         <div className="feed-list">
           {feedsStatus === 'loading' ? <span className="state-line">Loading feeds...</span> : null}
           {feedsStatus === 'error' ? <span className="state-line state-line-error">Feeds failed to load</span> : null}
-          {feedsStatus === 'ready' && feeds.length === 0 ? <span className="state-line">No feeds yet</span> : null}
+          {feedsStatus === 'ready' && feeds.length === 0 ? (
+            <span className="state-line">No feeds yet. Click Add Feed to sync default sources.</span>
+          ) : null}
           {feeds.map((feed) => (
             <FeedRow
               feed={feed}
@@ -584,20 +607,22 @@ export function ReaderApp() {
                   Source
                 </a>
                 <button
-                  className="tool-button"
+                  className={selectedArticleIsRead ? 'tool-button is-active' : 'tool-button'}
                   type="button"
+                  title={selectedArticleIsRead ? 'Current status: read. Click to mark unread.' : 'Current status: unread. Click to mark read.'}
                   onClick={() => void handleArticleStateChange({ isRead: !selectedArticleIsRead })}
                 >
                   <CheckCircle2 size={17} aria-hidden="true" />
-                  {selectedArticleIsRead ? 'Unread' : 'Mark Read'}
+                  {selectedArticleIsRead ? 'Read' : 'Unread'}
                 </button>
                 <button
-                  className="tool-button"
+                  className={selectedArticleIsStarred ? 'tool-button is-active' : 'tool-button'}
                   type="button"
+                  title={selectedArticleIsStarred ? 'Current status: saved. Click to unsave.' : 'Current status: not saved. Click to save.'}
                   onClick={() => void handleArticleStateChange({ isStarred: !selectedArticleIsStarred })}
                 >
                   <Star size={17} aria-hidden="true" />
-                  {selectedArticleIsStarred ? 'Unsave' : 'Save'}
+                  {selectedArticleIsStarred ? 'Saved' : 'Save'}
                 </button>
                 <button
                   className={activePanel === 'summary' ? 'tool-button is-active' : 'tool-button'}
@@ -675,14 +700,11 @@ export function ReaderApp() {
                       <Database size={17} aria-hidden="true" />
                       <span>Usage</span>
                     </div>
-                    <div className="usage-total">{usageTotal.toLocaleString()} tokens</div>
+                    <div className="usage-total">0 tokens</div>
                     <div className="usage-list">
-                      {mockDataset.usageEvents.map((event) => (
-                        <div className="usage-row" key={event.id}>
-                          <span>{event.purpose}</span>
-                          <strong>{event.totalTokens}</strong>
-                        </div>
-                      ))}
+                      <div className="usage-row">
+                        <span>Summary / Translation usage will appear after AI calls run.</span>
+                      </div>
                     </div>
                   </div>
                 ) : null}
@@ -737,15 +759,15 @@ export function ReaderApp() {
                       <span>{activePanel === 'summary' ? 'Summary' : 'Translation'}</span>
                     </div>
                     <div className="agent-status-list">
-                      {mockDataset.agentPreviews.map((preview) => (
-                        <div className="agent-status-row" key={preview.taskType}>
-                          <span>{preview.taskType}</span>
-                          <StatusPill status={preview.status} />
-                        </div>
-                      ))}
+                      <div className="agent-status-row">
+                        <span>{activePanel}</span>
+                        <StatusPill status="idle" />
+                      </div>
                     </div>
                     <p className="agent-output">
-                      {mockDataset.agentPreviews.find((preview) => preview.taskType === activePanel)?.output}
+                      {selectedContent?.canonicalMarkdown
+                        ? 'This article is ready for AI processing. Summary and Translation will use its canonicalMarkdown input.'
+                        : 'Sync and select an article with canonicalMarkdown before running AI processing.'}
                     </p>
                     <div className="inspector-actions">
                       <button className="icon-button" type="button" aria-label="Regenerate" title="Regenerate">
@@ -760,7 +782,7 @@ export function ReaderApp() {
                     </div>
                     <div className="provider-line">
                       <Wifi size={16} aria-hidden="true" />
-                      <span>{mockDataset.providers[0]?.model}</span>
+                      <span>Provider not configured</span>
                     </div>
                   </div>
                 ) : null}
@@ -772,9 +794,9 @@ export function ReaderApp() {
                 <FileText size={16} aria-hidden="true" />
                 canonicalMarkdown
               </span>
-              <span>Week2ReaderDataPort</span>
-              <span>agent/providers</span>
-              <span>usage/events</span>
+              <span>Local storage</span>
+              <span>AI provider</span>
+              <span>Usage records</span>
             </footer>
           </>
         ) : (

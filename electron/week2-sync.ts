@@ -214,7 +214,7 @@ export async function runWeek2Sync(feedUrls?: string[]): Promise<Week2FrontendSy
   const subscriptions =
     feedUrls?.length || storedSubscriptions.length > 0
       ? storedSubscriptions
-      : await createSubscriptionProvider(normalizedFeedUrls, 'mock').listActiveSubscriptions();
+      : await createSubscriptionProvider(normalizedFeedUrls, 'manual').listActiveSubscriptions();
 
   const syncService = createSyncService({
     subscriptionProvider: createStaticSubscriptionProvider(subscriptions),

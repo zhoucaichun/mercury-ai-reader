@@ -411,6 +411,19 @@ button {
   padding: 15px;
 }
 
+.article-row.is-read {
+  background: #f5f2ea;
+}
+
+.article-row.is-read .article-row-title,
+.article-row.is-read .article-row-excerpt {
+  color: #68736f;
+}
+
+.article-row.is-unread .article-row-title {
+  color: #142725;
+}
+
 .article-row-header,
 .tag-list {
   display: flex;
@@ -435,6 +448,29 @@ button {
 }
 
 .read-dot-saved {
+  background: #a46b2d;
+}
+
+.article-state-badge {
+  min-height: 20px;
+  padding: 2px 7px;
+  color: #fbfaf7;
+  background: #2f675c;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 16px;
+}
+
+.article-state-badge.is-unread {
+  background: #304e68;
+}
+
+.article-state-badge.is-read {
+  background: #68736f;
+}
+
+.article-state-badge.is-starred {
   background: #a46b2d;
 }
 
