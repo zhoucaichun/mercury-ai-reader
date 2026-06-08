@@ -155,10 +155,10 @@ export function LLMProviderSettingsPanel({
         {testResult ? (
           <span
             className={`llm-usage-panel__status ${
-              testResult.ok ? "is-succeeded" : "is-failed"
+              testResult.status === "succeeded" ? "is-succeeded" : "is-failed"
             }`}
           >
-            {testResult.ok ? "Connected" : testResult.errorMessage ?? "Failed"}
+            {testResult.status === "succeeded" ? "Connected" : testResult.errorMessage ?? "Failed"}
           </span>
         ) : null}
       </div>

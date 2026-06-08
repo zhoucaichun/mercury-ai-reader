@@ -69,7 +69,7 @@ export class MockLLMProvider implements LLMProvider {
       providerId: this.resolvedConfig.providerId,
       providerName: this.resolvedConfig.providerName,
       model: this.resolvedConfig.model,
-      ok: true,
+      status: "succeeded",
       latencyMs: Date.now() - startedAt,
     };
   }

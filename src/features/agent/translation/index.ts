@@ -72,6 +72,7 @@ export function createTranslationAgent(
     try {
       const response = await callLLMWithUsage(provider, request, usageStore);
       const now = new Date().toISOString();
+      const usage = response.usage ?? {};
 
       return {
         status: "succeeded",
@@ -86,10 +87,10 @@ export function createTranslationAgent(
           providerId: response.providerId,
           providerName: response.providerName,
           model: response.model,
-          promptTokens: response.usage.promptTokens,
-          completionTokens: response.usage.completionTokens,
-          totalTokens: response.usage.totalTokens,
-          estimated: response.usage.estimated,
+          promptTokens: usage.promptTokens,
+          completionTokens: usage.completionTokens,
+          totalTokens: usage.totalTokens,
+          estimated: usage.estimated,
           createdAt: now,
           updatedAt: now,
         },

@@ -37,9 +37,33 @@ export function LLMUsagePanel({
       </div>
 
       <div className="llm-usage-panel__grid">
-        <UsageGroupTable title="Purpose" rows={summary.byPurpose} />
-        <UsageGroupTable title="Provider" rows={summary.byProvider} />
-        <UsageGroupTable title="Model" rows={summary.byModel} />
+        <UsageGroupTable
+          title="Purpose"
+          rows={summary.byPurpose.map((row) => ({
+            key: row.purpose,
+            label: formatPurpose(row.purpose),
+            calls: row.calls,
+            totalTokens: row.totalTokens,
+          }))}
+        />
+        <UsageGroupTable
+          title="Provider"
+          rows={summary.byProvider.map((row) => ({
+            key: row.providerId,
+            label: row.providerName,
+            calls: row.calls,
+            totalTokens: row.totalTokens,
+          }))}
+        />
+        <UsageGroupTable
+          title="Model"
+          rows={summary.byModel.map((row) => ({
+            key: row.model,
+            label: row.model,
+            calls: row.calls,
+            totalTokens: row.totalTokens,
+          }))}
+        />
       </div>
 
       <div className="llm-usage-panel__section">
@@ -114,8 +138,6 @@ function UsageGroupTable({
     key: string;
     label: string;
     calls: number;
-    succeeded: number;
-    failed: number;
     totalTokens: number;
   }>;
 }) {
@@ -128,23 +150,19 @@ function UsageGroupTable({
             <tr>
               <th>Name</th>
               <th>Calls</th>
-              <th>OK</th>
-              <th>Fail</th>
               <th>Token</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={5}>No data.</td>
+                <td colSpan={3}>No data.</td>
               </tr>
             ) : (
               rows.map((row) => (
                 <tr key={row.key}>
                   <td>{row.label}</td>
                   <td>{row.calls}</td>
-                  <td>{row.succeeded}</td>
-                  <td>{row.failed}</td>
                   <td>{formatTokenCount(row.totalTokens)}</td>
                 </tr>
               ))
