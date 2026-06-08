@@ -49,7 +49,10 @@ export function createWeek3AgentRuntime(
       input: Week3AgentRunInput<TInput>,
     ): Promise<Week3AgentRunResult<TOutput>> {
       if (input.signal?.aborted) {
-        return cancelResult(input.taskId, "Agent task was cancelled before execution.");
+        return cancelResult<TOutput>(
+          input.taskId,
+          "Agent task was cancelled before execution.",
+        );
       }
 
       emitState(options.onStateChange, {
@@ -97,7 +100,10 @@ export function createWeek3AgentRuntime(
             errorCode: "cancelled",
             errorMessage: "Agent task was cancelled during execution.",
           });
-          return cancelResult(input.taskId, "Agent task was cancelled during execution.");
+          return cancelResult<TOutput>(
+            input.taskId,
+            "Agent task was cancelled during execution.",
+          );
         }
 
         const normalized = normalizeRuntimeError(error);
@@ -189,7 +195,10 @@ function emitState(
   onStateChange?.(state);
 }
 
-function cancelResult(taskId: string, message: string): Week3AgentRunResult {
+function cancelResult<TOutput>(
+  taskId: string,
+  message: string,
+): Week3AgentRunResult<TOutput> {
   return {
     taskId,
     status: "cancelled",
