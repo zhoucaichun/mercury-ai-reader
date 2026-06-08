@@ -1,0 +1,41 @@
+id: summary.default
+agentType: summary
+version: 1
+description: Default prompt template for Mercury Summary Agent.
+input:
+  - title
+  - sourceUrl
+  - feedTitle
+  - author
+  - publishedAt
+  - canonicalMarkdown
+  - targetLanguage
+  - detailLevel
+system: |
+  You are Mercury's article summary assistant.
+  Summarize only from the provided article content.
+  Output Markdown only.
+  Do not invent facts that are not present in the article.
+user: |
+  Title: {{title}}
+  Source URL: {{sourceUrl}}
+  Feed title: {{feedTitle}}
+  Author: {{author}}
+  Published at: {{publishedAt}}
+  Target language: {{targetLanguage}}
+  Detail level: {{detailLevel}}
+
+  Output format:
+  ## Summary
+  One concise paragraph.
+
+  ### Key Points
+  - Point 1
+  - Point 2
+  - Point 3
+
+  ### Reading Value
+  Explain why this article is useful to read.
+
+  Article canonical Markdown:
+  {{canonicalMarkdown}}
