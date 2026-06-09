@@ -125,6 +125,7 @@ export interface TranslationResult {
   segmenterVersion: string;
   outputLanguage: string;
   runStatus: TranslationRunStatus;
+  markdown: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -522,4 +523,130 @@ export interface Week2ReaderPipeline {
     contentText?: string;
     summary?: string;
   }): Promise<Week2ArticleContent>;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Week 3 AI / Export / Usage Contract (AGENTS.md §5B)
+// ═══════════════════════════════════════════════════════════════
+
+// --- External-facing Week3 types (string IDs, provider info) ---
+
+export interface Week3SummaryResult {
+  id: string;
+  articleId: string;
+  contentId?: string;
+  taskId: string;
+  targetLanguage: string;
+  detailLevel: SummaryDetailLevel;
+  markdown: string;
+  providerId: string;
+  providerName: string;
+  model: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Week3TranslationResult {
+  id: string;
+  articleId: string;
+  contentId?: string;
+  taskId: string;
+  targetLanguage: string;
+  sourceLanguage?: string;
+  markdown: string;
+  providerId: string;
+  providerName: string;
+  model: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type Week3LLMPurpose = 'summary' | 'translation' | 'connection-test' | 'other';
+
+export interface Week3LLMUsageEvent {
+  id: string;
+  purpose: Week3LLMPurpose;
+  providerId: string;
+  providerName: string;
+  model: string;
+  status: 'succeeded' | 'failed';
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  estimated?: boolean;
+  startedAt?: string;
+  finishedAt?: string;
+  latencyMs?: number;
+  errorMessage?: string;
+  requestId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface Week3LLMUsageSummary {
+  totalCalls: number;
+  succeededCalls: number;
+  failedCalls: number;
+  totalTokens: number;
+  estimatedTokens: number;
+  byPurpose: Array<{ purpose: Week3LLMPurpose; calls: number; totalTokens: number }>;
+  byProvider: Array<{ providerId: string; providerName: string; calls: number; totalTokens: number }>;
+  byModel: Array<{ model: string; calls: number; totalTokens: number }>;
+  recent: Week3LLMUsageEvent[];
+}
+
+// --- Mapping functions ---
+
+export function toWeek3SummaryResult(
+  result: SummaryResult,
+  run: AgentTaskRun,
+): Week3SummaryResult {
+  return {
+    id: String(result.taskRunId),
+    articleId: String(result.entryId),
+    taskId: String(result.taskRunId),
+    targetLanguage: result.targetLanguage,
+    detailLevel: result.detailLevel,
+    markdown: result.markdown,
+    providerId: String(run.providerProfileId ?? ''),
+    providerName: '',
+    model: '',
+    createdAt: result.createdAt,
+    updatedAt: result.updatedAt,
+  };
+}
+
+export function toWeek3TranslationResult(
+  result: TranslationResult,
+  run: AgentTaskRun,
+): Week3TranslationResult {
+  return {
+    id: String(result.taskRunId),
+    articleId: String(result.entryId),
+    taskId: String(result.taskRunId),
+    targetLanguage: result.targetLanguage,
+    markdown: result.markdown,
+    providerId: String(run.providerProfileId ?? ''),
+    providerName: '',
+    model: '',
+    createdAt: result.createdAt,
+    updatedAt: result.updatedAt,
+  };
+}
+
+export function toWeek3UsageEvent(event: LLMUsageEvent): Week3LLMUsageEvent {
+  return {
+    id: String(event.id),
+    purpose: event.purpose,
+    providerId: event.providerId,
+    providerName: event.providerName,
+    model: event.model,
+    status: event.requestStatus,
+    promptTokens: event.promptTokens ?? undefined,
+    completionTokens: event.completionTokens ?? undefined,
+    totalTokens: event.totalTokens ?? undefined,
+    estimated: event.estimated ?? undefined,
+    startedAt: event.startedAt ?? undefined,
+    finishedAt: event.finishedAt ?? undefined,
+    latencyMs: event.latencyMs ?? undefined,
+  };
 }
