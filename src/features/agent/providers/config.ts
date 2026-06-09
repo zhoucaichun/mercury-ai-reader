@@ -77,11 +77,7 @@ export function redactApiKey(apiKey?: string): string | undefined {
     return undefined;
   }
 
-  if (apiKey.length <= 8) {
-    return "****";
-  }
-
-  return `${apiKey.slice(0, 4)}****${apiKey.slice(-4)}`;
+  return "<redacted>";
 }
 
 export function redactProviderConfig(

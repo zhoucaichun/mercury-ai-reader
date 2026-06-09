@@ -4,14 +4,20 @@ import type {
   LLMProvider,
   LLMProviderConfig,
   LLMUsageInfo,
-  LLMPurpose,
+  Week3LLMChatRequest,
+  Week3LLMChatResponse,
+  Week3LLMProvider,
+  Week3RuntimeUsage,
 } from "../agent/providers/types";
-import { estimateTokensFromMessages } from "../agent/providers/tokenEstimate";
+import {
+  estimateTokensFromMessages,
+  estimateTokensFromText,
+} from "../agent/providers/tokenEstimate";
 import type {
   LLMCallStatus,
   LLMUsageEvent,
-  LLMUsageGroupStat,
   LLMUsageSummary,
+  Week3LLMUsageEvent,
 } from "./types";
 
 export interface LLMUsageEventStore {
@@ -69,10 +75,10 @@ export class BrowserLocalStorageLLMUsageEventStore implements LLMUsageEventStore
 }
 
 export async function callLLMWithUsage(
-  provider: LLMProvider,
-  request: LLMChatRequest,
+  provider: Week3LLMProvider,
+  request: Week3LLMChatRequest,
   usageStore?: LLMUsageEventStore,
-): Promise<LLMChatResponse> {
+): Promise<Week3LLMChatResponse> {
   const startedAt = new Date();
 
   try {
@@ -95,12 +101,35 @@ export async function callLLMWithUsage(
   }
 }
 
+export async function testLLMConnectionWithUsage(
+  provider: Week3LLMProvider,
+  usageStore?: LLMUsageEventStore,
+  signal?: AbortSignal,
+) {
+  return callLLMWithUsage(
+    provider,
+    {
+      purpose: "connection-test",
+      messages: [{ role: "user", content: "Reply with OK." }],
+      maxTokens: 8,
+      temperature: 0,
+      metadata: {
+        agentType: "connection-test",
+        providerId: provider.config.providerId,
+      },
+      signal,
+    },
+    usageStore,
+  );
+}
+
 export function createUsageEventFromResponse(
   request: LLMChatRequest,
   response: LLMChatResponse,
   startedAt: Date,
-): LLMUsageEvent {
+): Week3LLMUsageEvent {
   const finishedAt = new Date();
+  const usage = normalizeResponseUsage(request, response);
 
   return {
     id: createUsageEventId(),
@@ -109,10 +138,10 @@ export function createUsageEventFromResponse(
     providerName: response.providerName,
     model: response.model,
     status: "succeeded",
-    promptTokens: response.usage.promptTokens,
-    completionTokens: response.usage.completionTokens,
-    totalTokens: response.usage.totalTokens,
-    estimated: response.usage.estimated,
+    promptTokens: usage.promptTokens,
+    completionTokens: usage.completionTokens,
+    totalTokens: usage.totalTokens,
+    estimated: usage.estimated,
     startedAt: startedAt.toISOString(),
     finishedAt: finishedAt.toISOString(),
     latencyMs: response.latencyMs,
@@ -127,7 +156,7 @@ export function createFailedUsageEvent(input: {
   startedAt: Date;
   error: unknown;
   estimatedPromptTokens?: number;
-}): LLMUsageEvent {
+}): Week3LLMUsageEvent {
   const finishedAt = new Date();
 
   return {
@@ -161,9 +190,9 @@ export function summarizeUsage(
     failedCalls: countByStatus(events, "failed"),
     totalTokens: sumTokens(events),
     estimatedTokens: sumEstimatedTokens(events),
-    byPurpose: groupUsage(events, (event) => event.purpose, formatPurpose),
-    byProvider: groupUsage(events, (event) => event.providerId, (event) => event.providerName),
-    byModel: groupUsage(events, (event) => event.model, (event) => event.model),
+    byPurpose: groupByPurpose(events),
+    byProvider: groupByProvider(events),
+    byModel: groupByModel(events),
     recent: getRecentUsageEvents(events, recentLimit),
   };
 }
@@ -183,33 +212,70 @@ export function formatTokenCount(value: number): string {
   return new Intl.NumberFormat("zh-CN").format(value);
 }
 
-function groupUsage(
-  events: LLMUsageEvent[],
-  keySelector: (event: LLMUsageEvent) => string,
-  labelSelector: (event: LLMUsageEvent) => string,
-): LLMUsageGroupStat[] {
-  const groups = new Map<string, LLMUsageGroupStat>();
+function groupByPurpose(events: LLMUsageEvent[]): LLMUsageSummary["byPurpose"] {
+  const groups = new Map<string, { purpose: LLMUsageEvent["purpose"]; calls: number; totalTokens: number }>();
 
   for (const event of events) {
-    const key = keySelector(event);
+    const key = event.purpose;
     const existing = groups.get(key);
     const next = existing ?? {
-      key,
-      label: labelSelector(event),
+      purpose: event.purpose,
       calls: 0,
-      succeeded: 0,
-      failed: 0,
       totalTokens: 0,
-      estimatedTokens: 0,
     };
 
     next.calls += 1;
-    next.succeeded += event.status === "succeeded" ? 1 : 0;
-    next.failed += event.status === "failed" ? 1 : 0;
     next.totalTokens += event.totalTokens ?? 0;
-    next.estimatedTokens += event.estimated ? event.totalTokens ?? 0 : 0;
 
     groups.set(key, next);
+  }
+
+  return [...groups.values()].sort((left, right) => {
+    return right.calls - left.calls || right.totalTokens - left.totalTokens;
+  });
+}
+
+function groupByProvider(events: LLMUsageEvent[]): LLMUsageSummary["byProvider"] {
+  const groups = new Map<
+    string,
+    { providerId: string; providerName: string; calls: number; totalTokens: number }
+  >();
+
+  for (const event of events) {
+    const existing = groups.get(event.providerId);
+    const next = existing ?? {
+      providerId: event.providerId,
+      providerName: event.providerName,
+      calls: 0,
+      totalTokens: 0,
+    };
+
+    next.calls += 1;
+    next.totalTokens += event.totalTokens ?? 0;
+
+    groups.set(event.providerId, next);
+  }
+
+  return [...groups.values()].sort((left, right) => {
+    return right.calls - left.calls || right.totalTokens - left.totalTokens;
+  });
+}
+
+function groupByModel(events: LLMUsageEvent[]): LLMUsageSummary["byModel"] {
+  const groups = new Map<string, { model: string; calls: number; totalTokens: number }>();
+
+  for (const event of events) {
+    const existing = groups.get(event.model);
+    const next = existing ?? {
+      model: event.model,
+      calls: 0,
+      totalTokens: 0,
+    };
+
+    next.calls += 1;
+    next.totalTokens += event.totalTokens ?? 0;
+
+    groups.set(event.model, next);
   }
 
   return [...groups.values()].sort((left, right) => {
@@ -231,17 +297,6 @@ function sumEstimatedTokens(events: LLMUsageEvent[]): number {
   }, 0);
 }
 
-function formatPurpose(event: LLMUsageEvent): string {
-  const labels: Record<LLMPurpose, string> = {
-    summary: "Summary",
-    translation: "Translation",
-    "connection-test": "Connection test",
-    other: "Other",
-  };
-
-  return labels[event.purpose];
-}
-
 function createUsageEventId(): string {
   return `llm-usage-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -259,6 +314,30 @@ export function emptyUsage(): LLMUsageInfo {
     promptTokens: 0,
     completionTokens: 0,
     totalTokens: 0,
+    estimated: true,
+  };
+}
+
+function normalizeResponseUsage(
+  request: LLMChatRequest,
+  response: LLMChatResponse,
+): Required<Week3RuntimeUsage> {
+  if (response.usage) {
+    return {
+      promptTokens: response.usage.promptTokens ?? 0,
+      completionTokens: response.usage.completionTokens ?? 0,
+      totalTokens: response.usage.totalTokens ?? 0,
+      estimated: response.usage.estimated ?? false,
+    };
+  }
+
+  const promptTokens = estimateTokensFromMessages(request.messages);
+  const completionTokens = estimateTokensFromText(response.content);
+
+  return {
+    promptTokens,
+    completionTokens,
+    totalTokens: promptTokens + completionTokens,
     estimated: true,
   };
 }

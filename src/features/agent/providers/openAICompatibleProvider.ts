@@ -69,7 +69,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
 
   async chat(request: LLMChatRequest): Promise<LLMChatResponse> {
     const startedAt = Date.now();
-    const { signal, cleanup } = createTimeoutSignal(
+    const timeoutState = createTimeoutSignal(
       request.signal,
       this.resolvedConfig.timeoutMs,
     );
@@ -87,7 +87,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
             max_tokens: request.maxTokens,
             stream: false,
           }),
-          signal,
+          signal: timeoutState.signal,
         },
       );
 
@@ -127,13 +127,21 @@ export class OpenAICompatibleProvider implements LLMProvider {
         throw error;
       }
 
+      if (timeoutState.didTimeout()) {
+        throw new LLMProviderError("Provider request timed out.", {
+          code: "timeout",
+          retryable: true,
+          details: error,
+        });
+      }
+
       throw new LLMProviderError(normalizeUnknownError(error), {
         code: "network_error",
         retryable: true,
         details: error,
       });
     } finally {
-      cleanup();
+      timeoutState.cleanup();
     }
   }
 
@@ -158,7 +166,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
         providerId: this.resolvedConfig.providerId,
         providerName: this.resolvedConfig.providerName,
         model: this.resolvedConfig.model,
-        ok: true,
+        status: "succeeded",
         latencyMs: Date.now() - startedAt,
       };
     } catch (error) {
@@ -166,7 +174,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
         providerId: this.resolvedConfig.providerId,
         providerName: this.resolvedConfig.providerName,
         model: this.resolvedConfig.model,
-        ok: false,
+        status: "failed",
         latencyMs: Date.now() - startedAt,
         errorMessage: normalizeUnknownError(error),
       };
@@ -176,7 +184,6 @@ export class OpenAICompatibleProvider implements LLMProvider {
   private buildHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       "content-type": "application/json",
-      ...(this.resolvedConfig.defaultHeaders ?? {}),
     };
 
     if (this.resolvedConfig.apiKey) {
@@ -254,17 +261,22 @@ function normalizeUnknownError(error: unknown): string {
 function createTimeoutSignal(
   inputSignal: AbortSignal | undefined,
   timeoutMs: number | undefined,
-): { signal?: AbortSignal; cleanup: () => void } {
+): { signal?: AbortSignal; cleanup: () => void; didTimeout: () => boolean } {
   if (!timeoutMs || typeof AbortController === "undefined") {
     return {
       signal: inputSignal,
       cleanup: () => undefined,
+      didTimeout: () => false,
     };
   }
 
   const controller = new AbortController();
+  let timedOut = false;
   const abortFromInput = () => controller.abort();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
 
   if (inputSignal) {
     if (inputSignal.aborted) {
@@ -280,5 +292,6 @@ function createTimeoutSignal(
       clearTimeout(timeoutId);
       inputSignal?.removeEventListener("abort", abortFromInput);
     },
+    didTimeout: () => timedOut,
   };
 }

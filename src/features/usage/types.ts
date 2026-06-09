@@ -1,10 +1,12 @@
-import type { LLMPurpose } from "../agent/providers/types";
+import type { Week3LLMPurpose } from "../agent/providers/types";
 
 export type LLMCallStatus = "succeeded" | "failed";
 
-export interface LLMUsageEvent {
+export type Week3ISODateString = string;
+
+export interface Week3LLMUsageEvent {
   id: string;
-  purpose: LLMPurpose;
+  purpose: Week3LLMPurpose;
   providerId: string;
   providerName: string;
   model: string;
@@ -13,32 +15,30 @@ export interface LLMUsageEvent {
   completionTokens?: number;
   totalTokens?: number;
   estimated?: boolean;
-  startedAt?: string;
-  finishedAt?: string;
+  startedAt?: Week3ISODateString;
+  finishedAt?: Week3ISODateString;
   latencyMs?: number;
   errorMessage?: string;
   requestId?: string;
   metadata?: Record<string, unknown>;
 }
 
-export interface LLMUsageGroupStat {
-  key: string;
-  label: string;
-  calls: number;
-  succeeded: number;
-  failed: number;
-  totalTokens: number;
-  estimatedTokens: number;
-}
-
-export interface LLMUsageSummary {
+export interface Week3LLMUsageSummary {
   totalCalls: number;
   succeededCalls: number;
   failedCalls: number;
   totalTokens: number;
   estimatedTokens: number;
-  byPurpose: LLMUsageGroupStat[];
-  byProvider: LLMUsageGroupStat[];
-  byModel: LLMUsageGroupStat[];
-  recent: LLMUsageEvent[];
+  byPurpose: Array<{ purpose: Week3LLMPurpose; calls: number; totalTokens: number }>;
+  byProvider: Array<{
+    providerId: string;
+    providerName: string;
+    calls: number;
+    totalTokens: number;
+  }>;
+  byModel: Array<{ model: string; calls: number; totalTokens: number }>;
+  recent: Week3LLMUsageEvent[];
 }
+
+export type LLMUsageEvent = Week3LLMUsageEvent;
+export type LLMUsageSummary = Week3LLMUsageSummary;

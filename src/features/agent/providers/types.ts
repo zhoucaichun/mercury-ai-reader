@@ -1,36 +1,42 @@
-export type LLMProviderKind = "openai-compatible" | "mock";
+export type Week3LLMProviderKind = "openai-compatible" | "mock";
 
-export type LLMPurpose =
+export type Week3LLMPurpose =
   | "summary"
   | "translation"
   | "connection-test"
   | "other";
 
-export interface LLMProviderConfig {
+export interface Week3RuntimeUsage {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  estimated?: boolean;
+}
+
+export interface Week3LLMProviderConfig {
   providerId: string;
   providerName: string;
-  kind: LLMProviderKind;
+  kind: Week3LLMProviderKind;
   baseUrl: string;
   model: string;
   apiKey?: string;
   apiKeyEnv?: string;
-  defaultHeaders?: Record<string, string>;
   enabled?: boolean;
   timeoutMs?: number;
 }
 
-export type RedactedLLMProviderConfig = Omit<LLMProviderConfig, "apiKey"> & {
+export type RedactedWeek3LLMProviderConfig = Omit<Week3LLMProviderConfig, "apiKey"> & {
   apiKey?: string;
 };
 
-export interface LLMChatMessage {
+export interface Week3LLMChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
 }
 
-export interface LLMChatRequest {
-  purpose: LLMPurpose;
-  messages: LLMChatMessage[];
+export interface Week3LLMChatRequest {
+  purpose: Week3LLMPurpose;
+  messages: Week3LLMChatMessage[];
   model?: string;
   temperature?: number;
   maxTokens?: number;
@@ -38,38 +44,31 @@ export interface LLMChatRequest {
   signal?: AbortSignal;
 }
 
-export interface LLMUsageInfo {
-  promptTokens: number;
-  completionTokens: number;
-  totalTokens: number;
-  estimated: boolean;
-}
-
-export interface LLMChatResponse {
+export interface Week3LLMChatResponse {
   id?: string;
   providerId: string;
   providerName: string;
   model: string;
   content: string;
-  usage: LLMUsageInfo;
+  usage?: Week3RuntimeUsage;
   status: "succeeded";
   latencyMs: number;
   raw?: unknown;
 }
 
-export interface LLMConnectionTestResult {
+export interface Week3LLMConnectionTestResult {
   providerId: string;
   providerName: string;
   model: string;
-  ok: boolean;
-  latencyMs: number;
+  status: "succeeded" | "failed";
+  latencyMs?: number;
   errorMessage?: string;
 }
 
-export interface LLMProvider {
-  readonly config: RedactedLLMProviderConfig;
-  chat(request: LLMChatRequest): Promise<LLMChatResponse>;
-  testConnection(signal?: AbortSignal): Promise<LLMConnectionTestResult>;
+export interface Week3LLMProvider {
+  readonly config: RedactedWeek3LLMProviderConfig;
+  chat(request: Week3LLMChatRequest): Promise<Week3LLMChatResponse>;
+  testConnection?(signal?: AbortSignal): Promise<Week3LLMConnectionTestResult>;
 }
 
 export class LLMProviderError extends Error {
@@ -95,3 +94,14 @@ export class LLMProviderError extends Error {
     this.details = options.details;
   }
 }
+
+export type LLMProviderKind = Week3LLMProviderKind;
+export type LLMPurpose = Week3LLMPurpose;
+export type LLMProviderConfig = Week3LLMProviderConfig;
+export type RedactedLLMProviderConfig = RedactedWeek3LLMProviderConfig;
+export type LLMChatMessage = Week3LLMChatMessage;
+export type LLMChatRequest = Week3LLMChatRequest;
+export type LLMUsageInfo = Required<Week3RuntimeUsage>;
+export type LLMChatResponse = Week3LLMChatResponse;
+export type LLMConnectionTestResult = Week3LLMConnectionTestResult;
+export type LLMProvider = Week3LLMProvider;

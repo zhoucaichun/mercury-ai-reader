@@ -1,142 +1,121 @@
-# T9 LLM Provider / 模型配置 / Usage 统计草案
+# T9 Week 3 LLM Provider / Usage
 
 负责人：T9 蔡钦楠
 
-## 当前阶段
+## 本周目标
 
-本文件对应 Week 1 的 LLM Provider / 模型配置 / Usage 统计字段与面板草案。
+第三周 T9 的目标是把 LLM Provider 和 Usage 记录做成可被 T8 Runtime、T10 Summary、T11 Translation 稳定调用的 Week 3 接口版本。
 
-当前目标是先稳定 Provider 与 Usage 的目录、接口和字段口径，方便后续 T8 Agent Runtime、T10 Summary Agent、T11 Translation Agent 复用统一模型调用入口。这里不是最终真实模型全部接入版本，也不要求 DeepSeek、学校模型、hymt2、本地模型全部真实连通。
+本周重点不是把所有真实模型全部接通，而是保证：
 
-## AGENTS.md 对齐
+- Provider 公共接口符合 `AGENTS.md` 第 5B 节；
+- 所有模型调用统一走 `provider.chat(request)`；
+- OpenAI-compatible Provider 支持 base URL、model、环境变量 API key、连接测试和超时错误；
+- Mock Provider 可用于内部 fallback 和自测；
+- 每次 Summary / Translation / connection-test 调用都能生成 `Week3LLMUsageEvent`；
+- Usage summary 只统计真实发生的调用或内部 fallback 调用，不把固定假数据当真实数据展示；
+- API key 和本地配置不进入仓库。
 
-本次整理已按 `AGENTS.md` 的目录规则放置：
+## 代码位置
 
-- Provider 代码：`src/features/agent/providers/`
-- Usage 代码：`src/features/usage/`
-- 功能文档：`docs/features/T9-llm-provider-usage.md`
+按 `AGENTS.md` 目录规则：
 
-不再新增或继续使用平行目录 `src/features/llm/`。
+- Provider：`src/features/agent/providers/`
+- Usage：`src/features/usage/`
+- 文档：`docs/features/T9-llm-provider-usage.md`
 
-## Week 2 说明
+不新增 `src/features/llm/` 平行目录。
 
-Week 2 主链路是：
+## Week 3 Provider Contract
 
-```text
-Feed / OPML -> Sync -> Local Storage -> Article List
-```
-
-T9 本周不作为主链路阻塞项，但必须按 `AGENTS.md` 对齐 Provider / Usage 目录和接口，避免后续合并冲突。
-
-本周优先保证：
-
-- mock provider 可用；
-- `provider.chat(request)` 调用形式稳定；
-- Usage event 字段稳定；
-- Summary / Translation 后续可以复用同一 Provider 调用入口；
-- Usage 面板先保持 MVP 字段与展示草案。
-
-本周不强求：
-
-- 所有真实模型全部接通；
-- 完整账单或复杂报表；
-- 云端同步；
-- Summary / Translation 完整业务联动。
-
-## Provider 接口
-
-Provider 配置字段：
+Provider 类型在 `src/features/agent/providers/types.ts` 中导出，Week 3 主接口如下：
 
 ```ts
-interface LLMProviderConfig {
+export type Week3LLMPurpose =
+  | "summary"
+  | "translation"
+  | "connection-test"
+  | "other";
+
+export type Week3LLMProviderKind = "openai-compatible" | "mock";
+
+export interface Week3LLMProviderConfig {
   providerId: string;
   providerName: string;
-  kind: "openai-compatible" | "mock";
+  kind: Week3LLMProviderKind;
   baseUrl: string;
   model: string;
   apiKey?: string;
   apiKeyEnv?: string;
-  defaultHeaders?: Record<string, string>;
   enabled?: boolean;
   timeoutMs?: number;
 }
-```
 
-统一调用形式：
-
-```ts
-provider.chat(request);
-response.content;
-```
-
-Provider 请求字段：
-
-```ts
-interface LLMChatRequest {
-  purpose: "summary" | "translation" | "connection-test" | "other";
-  messages: LLMChatMessage[];
+export interface Week3LLMChatRequest {
+  purpose: Week3LLMPurpose;
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
   model?: string;
   temperature?: number;
   maxTokens?: number;
   metadata?: Record<string, unknown>;
   signal?: AbortSignal;
 }
-```
 
-Provider 返回字段：
-
-```ts
-interface LLMChatResponse {
+export interface Week3LLMChatResponse {
   id?: string;
   providerId: string;
   providerName: string;
   model: string;
   content: string;
-  usage: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-    estimated: boolean;
-  };
+  usage?: Week3RuntimeUsage;
   status: "succeeded";
   latencyMs: number;
+  raw?: unknown;
+}
+
+export interface Week3LLMProvider {
+  readonly config: Week3LLMProviderConfig;
+  chat(request: Week3LLMChatRequest): Promise<Week3LLMChatResponse>;
+  testConnection?(signal?: AbortSignal): Promise<Week3LLMConnectionTestResult>;
 }
 ```
 
-## 已整理代码
+为了不破坏已有导入，代码里保留了 `LLMProviderConfig`、`LLMChatRequest`、`LLMChatResponse` 等旧名称作为 Week 3 类型别名。
 
-Provider：
+## Provider 实现
 
-- `src/features/agent/providers/types.ts`
-- `src/features/agent/providers/config.ts`
-- `src/features/agent/providers/providerFactory.ts`
-- `src/features/agent/providers/openAICompatibleProvider.ts`
-- `src/features/agent/providers/mockProvider.ts`
-- `src/features/agent/providers/tokenEstimate.ts`
-- `src/features/agent/providers/LLMProviderSettingsPanel.tsx`
+当前提供：
 
-Usage：
+- `MockLLMProvider`
+  - 用于内部 fallback 和本地自测；
+  - 支持成功调用；
+  - 输入包含 `[mock-fail]` 时触发失败路径；
+  - `testConnection()` 返回 `status: "succeeded"`。
 
-- `src/features/usage/types.ts`
-- `src/features/usage/usage.ts`
-- `src/features/usage/LLMUsagePanel.tsx`
-- `src/features/usage/LLMUsagePanel.css`
+- `OpenAICompatibleProvider`
+  - 调用 `/chat/completions`；
+  - 支持 `baseUrl`、`model`、`apiKey`、`apiKeyEnv`；
+  - 支持 `timeoutMs`；
+  - 超时时抛出 `LLMProviderError`，`code = "timeout"`；
+  - 网络失败使用 `code = "network_error"`；
+  - Provider HTTP 失败保留状态码和错误信息；
+  - Provider 不返回 usage 时，Usage 模块可以补 token 估算。
 
-配置示例：
+- `createWeek3LLMProvider`
+  - 根据 `kind` 创建 mock 或 OpenAI-compatible provider；
+  - 保留 `createLLMProvider` 作为兼容别名。
 
-- `config/llm.providers.example.json`
+## API Key 与隐私
 
-## API key 与隐私要求
-
-按 `AGENTS.md` 第 7 节和第 10 节执行：
+按 `AGENTS.md` 第 7、10 节执行：
 
 - 不提交真实 API key；
 - 不提交 `.env`；
-- 不提交本地个人配置文件；
-- 示例 key 统一写成 `<your-api-key>`；
-- 不写真实 key 格式，也不写 `sk-...`；
-- API key 建议通过 `apiKeyEnv` 指向本机环境变量；
-- 文章、AI 结果、usage 记录后续优先保存在本地 SQLite。
+- 不提交个人本地配置文件；
+- 示例统一写 `<your-api-key>`；
+- 不写真实 key 格式，不写 `sk-...`；
+- 优先使用 `apiKeyEnv` 指向本机环境变量；
+- `redactProviderConfig()` 不暴露 key 首尾字符，只显示 `<redacted>`。
 
 示例：
 
@@ -151,20 +130,7 @@ Usage：
 }
 ```
 
-也可以使用环境变量名：
-
-```json
-{
-  "providerId": "deepseek",
-  "providerName": "DeepSeek",
-  "kind": "openai-compatible",
-  "baseUrl": "https://api.deepseek.com/v1",
-  "apiKeyEnv": "DEEPSEEK_API_KEY",
-  "model": "deepseek-chat"
-}
-```
-
-## 多模型测试方案
+## 多模型接入测试
 
 | Provider | Base URL | Model | API key 配置 | 测试重点 |
 | --- | --- | --- | --- | --- |
@@ -174,22 +140,21 @@ Usage：
 | Ollama 本地 | `http://localhost:11434/v1` | 例如 `qwen2.5:7b` | `<your-api-key>` 占位即可 | 本地模型、离线演示 |
 | Mock Provider | `mock://local` | `mock-model` | 不需要 | 无网络、无真实 key 时联调 |
 
-连通性测试建议：
+连接测试建议：
 
-1. 使用 `createLLMProvider(config)` 创建 provider。
-2. 调用 `provider.testConnection()`。
-3. 成功时记录 provider、model、latency。
-4. 失败时返回 `errorMessage`，不要吞掉错误。
-5. 测试结果可以形成 `purpose = "connection-test"` 的 usage event。
+1. 用 `createWeek3LLMProvider(config)` 创建 provider。
+2. 调用 `provider.testConnection()` 只做连通性状态检查。
+3. 如果需要产生 usage event，调用 `testLLMConnectionWithUsage(provider, usageStore)`。
+4. 失败时返回或记录 `errorMessage`，不要吞掉错误。
 
-## Usage Event 字段
+## Week 3 Usage Contract
 
-Usage event 按 `AGENTS.md` 第 8 节使用扁平字段：
+Usage 类型在 `src/features/usage/types.ts` 中导出：
 
 ```ts
-interface LLMUsageEvent {
+export interface Week3LLMUsageEvent {
   id: string;
-  purpose: "summary" | "translation" | "connection-test" | "other";
+  purpose: Week3LLMPurpose;
   providerId: string;
   providerName: string;
   model: string;
@@ -198,8 +163,8 @@ interface LLMUsageEvent {
   completionTokens?: number;
   totalTokens?: number;
   estimated?: boolean;
-  startedAt?: string;
-  finishedAt?: string;
+  startedAt?: Week3ISODateString;
+  finishedAt?: Week3ISODateString;
   latencyMs?: number;
   errorMessage?: string;
   requestId?: string;
@@ -209,59 +174,68 @@ interface LLMUsageEvent {
 
 Usage 模块当前提供：
 
+- `callLLMWithUsage(provider, request, usageStore)`
+- `testLLMConnectionWithUsage(provider, usageStore, signal?)`
 - `createUsageEventFromResponse()`
 - `createFailedUsageEvent()`
-- `callLLMWithUsage()`
 - `summarizeUsage()`
 - `InMemoryLLMUsageEventStore`
 - `BrowserLocalStorageLLMUsageEventStore`
 
-后续 T2 落 SQLite 时，可以用同一字段口径替换 store 实现。
+其中 `metadata` 建议包含：
 
-## Usage 面板 MVP 展示方案
+- `taskId`
+- `articleId`
+- `contentId`
+- `agentType`
 
-汇总字段：
+后续 T2 可以用同一字段口径替换 store，实现 SQLite 持久化。
 
-- 总调用次数；
-- 成功次数；
-- 失败次数；
-- 总 token；
-- 估算 token。
+## Usage Summary
 
-分组统计：
+`summarizeUsage()` 返回 `Week3LLMUsageSummary`：
 
-- 按功能类型统计：Summary / Translation / Connection Test / Other；
-- 按 Provider 统计；
-- 按 Model 统计。
+```ts
+export interface Week3LLMUsageSummary {
+  totalCalls: number;
+  succeededCalls: number;
+  failedCalls: number;
+  totalTokens: number;
+  estimatedTokens: number;
+  byPurpose: Array<{ purpose: Week3LLMPurpose; calls: number; totalTokens: number }>;
+  byProvider: Array<{ providerId: string; providerName: string; calls: number; totalTokens: number }>;
+  byModel: Array<{ model: string; calls: number; totalTokens: number }>;
+  recent: Week3LLMUsageEvent[];
+}
+```
 
-最近调用明细：
+Usage 面板只消费实际传入的 usage events。未调用 AI 时，页面应展示空状态，不展示固定假数据。
 
-- 调用时间；
-- 功能类型；
-- Provider；
-- Model；
-- 状态；
-- Token；
-- 是否估算。
+## 自测范围
 
-当前 `LLMUsagePanel` 只是草案面板，后续需要 T7 挂入口、T2 提供持久化、T8/T10/T11 持续产出 usage event。
+已新增 `src/features/agent/providers/week3ProviderUsage.test.ts` 覆盖：
 
-## 后续对齐事项
+- Mock provider 成功调用；
+- Mock provider 失败调用；
+- usage event 字段完整性；
+- connection-test 生成 usage event；
+- usage summary 只统计实际调用；
+- API key 从环境变量解析；
+- Provider 配置脱敏；
+- OpenAI-compatible provider 超时错误码。
 
-- 与 T2 对齐：`LLMUsageEvent` 如何落库到本地 SQLite。
-- 与 T8 对齐：Agent Runtime 在调用结束时如何交给 usage 模块记录。
-- 与 T10 对齐：Summary Agent 使用 `provider.chat()` 并产生 `purpose = "summary"` 的 usage event。
-- 与 T11 对齐：Translation Agent 使用 `provider.chat()` 并产生 `purpose = "translation"` 的 usage event。
-- 与 T7 对齐：Usage 面板入口放在主 UI 的哪个位置。
+提交 PR 前建议运行：
 
-## 当前验收点
+```text
+npm test
+npm run build
+npm run smoke:week2
+```
 
-- Provider 代码已放到 `src/features/agent/providers/`。
-- Usage 代码已放到 `src/features/usage/`。
-- 文档已放到 `docs/features/T9-llm-provider-usage.md`。
-- 支持 `providerId / providerName / baseUrl / apiKey / apiKeyEnv / model` 配置。
-- 支持 mock provider。
-- 支持 OpenAI-compatible provider 草案。
-- 支持 `provider.chat(request)` 统一调用形式。
-- 支持 usage event 字段草案和统计汇总。
-- API key 示例已使用 `<your-api-key>`，不提交真实 key、`.env` 或本地个人配置文件。
+## 后续对齐
+
+- T2：把 `Week3LLMUsageEvent` 落到 SQLite。
+- T8：Runtime 调用 Provider 后统一交给 Usage 模块记录。
+- T10：Summary 使用 `provider.chat()`，产生 `purpose = "summary"` 的 usage event。
+- T11：Translation 使用 `provider.chat()`，产生 `purpose = "translation"` 的 usage event。
+- T7：在真实文章页面展示 Usage 空状态、最近调用和 token 汇总。
