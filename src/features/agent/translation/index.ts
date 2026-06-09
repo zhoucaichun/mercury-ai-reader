@@ -1,3 +1,13 @@
+// T11 Translation Agent — Week 3
+//
+// Two paths:
+//   1. T8 Runtime path: translateArticle() → AgentRuntime.runAgent()
+//   2. Direct Provider path: createTranslationAgent().translate()
+//      → provider.chat() + callLLMWithUsage()
+//
+// Every call produces a LLMUsageEvent via the Usage module.
+// Prompt rendered from resources/prompts/translation.default.yaml by T8 Prompts.
+
 import { MockLLMProvider } from "../providers/mockProvider";
 import type {
   LLMChatRequest,
@@ -9,6 +19,14 @@ import {
   InMemoryLLMUsageEventStore,
   type LLMUsageEventStore,
 } from "../../usage/usage";
+import type {
+  AgentRuntime,
+  AgentRunInput,
+  AgentRunResult,
+  RuntimeLLMResult,
+} from "../runtime/types";
+
+// ─── Translation types ───────────────────────────────────────────────
 
 export type TranslationTargetLanguage = "zh-CN" | "en-US" | string;
 
@@ -59,6 +77,8 @@ export interface CreateTranslationAgentOptions {
   usageStore?: LLMUsageEventStore;
 }
 
+// ─── Direct Provider path ────────────────────────────────────────────
+
 export function createTranslationAgent(
   options: CreateTranslationAgentOptions,
 ): TranslationAgent {
@@ -86,10 +106,10 @@ export function createTranslationAgent(
           providerId: response.providerId,
           providerName: response.providerName,
           model: response.model,
-          promptTokens: response.usage.promptTokens,
-          completionTokens: response.usage.completionTokens,
-          totalTokens: response.usage.totalTokens,
-          estimated: response.usage.estimated,
+          promptTokens: response.usage?.promptTokens,
+          completionTokens: response.usage?.completionTokens,
+          totalTokens: response.usage?.totalTokens,
+          estimated: response.usage?.estimated,
           createdAt: now,
           updatedAt: now,
         },
@@ -167,6 +187,100 @@ export function createMockTranslationAgent(): TranslationAgent {
   });
 }
 
+// ─── T8 Runtime path (Week 3) ───────────────────────────────────────
+//   translateArticle() routes through AgentRuntime.runAgent().
+//   Falls back to direct Provider path when runtime not provided.
+
+export interface TranslateArticleDeps {
+  runtime?: AgentRuntime;
+  provider?: LLMProvider;
+  usageStore?: LLMUsageEventStore;
+}
+
+export function createTranslateArticle(deps: TranslateArticleDeps = {}) {
+  const directAgent = createTranslationAgent({
+    provider: deps.provider ?? new MockLLMProvider({
+      providerId: "mock-provider",
+      providerName: "Mock Provider",
+      kind: "mock",
+      baseUrl: "mock://local",
+      model: "mock-translation-v1",
+    }),
+    usageStore: deps.usageStore,
+  });
+
+  async function translateArticle(
+    request: TranslationRequest,
+  ): Promise<TranslationResult> {
+    // ── T8 Runtime path ──
+    if (deps.runtime) {
+      const taskId = `translation-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const runInput: AgentRunInput<TranslationRequest> = {
+        taskId,
+        agentType: "translation",
+        templateId: "translation.default",
+        input: request,
+        providerId: deps.provider?.config.providerId ?? "mock-provider",
+        providerName: deps.provider?.config.providerName,
+        model: request.model ?? deps.provider?.config.model ?? "mock-model",
+        metadata: {
+          articleId: request.articleId,
+          contentId: request.contentId,
+          targetLanguage: request.targetLanguage,
+        },
+      };
+
+      const runResult: AgentRunResult<RuntimeLLMResult> =
+        await deps.runtime.runAgent(runInput);
+
+      if (runResult.status === "succeeded" && runResult.output) {
+        const out = runResult.output;
+        const now = new Date().toISOString();
+        return {
+          id: taskId,
+          articleId: request.articleId,
+          contentId: request.contentId,
+          targetLanguage: request.targetLanguage,
+          sourceLanguage: request.sourceLanguage,
+          // T8 RuntimeLLMResult uses "text" field
+          markdown: (out as any).text ?? out.content ?? "",
+          providerId: out.providerId,
+          providerName: out.providerName,
+          model: out.model,
+          promptTokens: out.usage?.promptTokens,
+          completionTokens: out.usage?.completionTokens,
+          totalTokens: out.usage?.totalTokens,
+          estimated: out.usage?.estimated,
+          createdAt: now,
+          updatedAt: now,
+        };
+      }
+
+      throw new Error(
+        runResult.errorMessage ?? "Translation failed via Agent Runtime.",
+      );
+    }
+
+    // ── Fallback: direct Provider path ──
+    const agentResult = await directAgent.translate(request);
+
+    if (agentResult.status === "failed" || !agentResult.result) {
+      throw new Error(agentResult.errorMessage ?? "Translation failed.");
+    }
+
+    return agentResult.result;
+  }
+
+  return { translateArticle };
+}
+
+// ─── Singleton ───────────────────────────────────────────────────────
+
+const defaultTranslateArticle = createTranslateArticle();
+export const translateArticle = defaultTranslateArticle.translateArticle;
+
+// ─── Helpers ─────────────────────────────────────────────────────────
+
 function createTranslationResultId(): string {
   return `translation-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -175,12 +289,11 @@ function normalizeTranslationError(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
-
   return String(error);
 }
 
 export const translationFeature = {
   key: "translation",
   ownerTasks: ["T11"],
-  status: "mock-agent-aligned-with-provider-usage",
+  status: "week3-runtime-provider-dual-path",
 } as const;
