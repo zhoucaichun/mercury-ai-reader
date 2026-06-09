@@ -1,5 +1,32 @@
-export * from './providers';
 export * from './translation';
+export {
+  LLM_PROVIDER_PRESETS,
+  chatCompletionsUrl,
+  normalizeBaseUrl,
+  redactApiKey,
+  redactProviderConfig,
+  resolveProviderConfig,
+  validateProviderConfig,
+  MockLLMProvider,
+  OpenAICompatibleProvider,
+  createLLMProvider,
+  createWeek3LLMProvider,
+  estimateTokensFromMessages,
+  estimateTokensFromText
+} from './providers';
+export type {
+  LLMChatMessage,
+  LLMChatRequest,
+  LLMChatResponse,
+  LLMConnectionTestResult,
+  LLMPurpose,
+  LLMProvider,
+  LLMProviderConfig,
+  LLMProviderKind,
+  LLMProviderPreset,
+  LLMUsageInfo,
+  RedactedLLMProviderConfig
+} from './providers';
 
 export type ProviderCallStatus = 'idle' | 'running' | 'succeeded' | 'failed';
 

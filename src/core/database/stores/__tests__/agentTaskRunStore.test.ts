@@ -17,7 +17,13 @@ describe('AgentTaskRunStore', () => {
     const entryStore = createEntryStore(db);
     store = createAgentTaskRunStore(db);
 
-    const feed = feedStore.upsert({ feedUrl: 'https://example.com/rss' });
+    const feed = feedStore.upsert({
+      feedUrl: 'https://example.com/rss',
+      siteUrl: null,
+      description: null,
+      feedParserVersion: null,
+      lastFetchedAt: null,
+    });
     const entry = entryStore.upsert({
       feedId: feed.id,
       guid: 'test-1',

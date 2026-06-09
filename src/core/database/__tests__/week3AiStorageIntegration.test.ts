@@ -27,7 +27,13 @@ describe('Week 3 AI Storage Integration', () => {
     translationStore = createTranslationResultStore(db);
     usageStore = createLLMUsageEventStore(db);
 
-    const feed = feedStore.upsert({ feedUrl: 'https://example.com/rss' });
+    const feed = feedStore.upsert({
+      feedUrl: 'https://example.com/rss',
+      siteUrl: null,
+      description: null,
+      feedParserVersion: null,
+      lastFetchedAt: null,
+    });
 
     const e1 = entryStore.upsert({
       feedId: feed.id,

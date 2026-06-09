@@ -17,7 +17,13 @@ describe('TranslationResultStore', () => {
     const entryStore = createEntryStore(db);
     store = createTranslationResultStore(db);
 
-    const feed = feedStore.upsert({ feedUrl: 'https://example.com/rss' });
+    const feed = feedStore.upsert({
+      feedUrl: 'https://example.com/rss',
+      siteUrl: null,
+      description: null,
+      feedParserVersion: null,
+      lastFetchedAt: null,
+    });
     const entry = entryStore.upsert({
       feedId: feed.id,
       guid: 'test-1',

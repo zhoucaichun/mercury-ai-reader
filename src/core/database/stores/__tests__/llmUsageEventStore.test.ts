@@ -44,7 +44,13 @@ describe('LLMUsageEventStore', () => {
     const entryStore = createEntryStore(db);
     store = createLLMUsageEventStore(db);
 
-    const feed = feedStore.upsert({ feedUrl: 'https://example.com/rss' });
+    const feed = feedStore.upsert({
+      feedUrl: 'https://example.com/rss',
+      siteUrl: null,
+      description: null,
+      feedParserVersion: null,
+      lastFetchedAt: null,
+    });
     const entry = entryStore.upsert({
       feedId: feed.id,
       guid: 'test-1',
@@ -63,7 +69,6 @@ describe('LLMUsageEventStore', () => {
       entryId,
       promptTokens: 100,
       completionTokens: 50,
-      totalTokens: 150,
       latencyMs: 1200,
       startedAt: '2026-06-09T10:00:00.000Z',
       finishedAt: '2026-06-09T10:00:01.200Z',
