@@ -15,6 +15,9 @@ export interface MarkdownExportFile {
   markdown: string;
 }
 
+export type Week3MarkdownExportData = MarkdownExportData;
+export type Week3MarkdownExportFile = MarkdownExportFile;
+
 export function renderMarkdownExport(data: MarkdownExportData): string {
   const exportedAt = data.exportedAt ?? new Date().toISOString();
   const sections = [
@@ -56,6 +59,12 @@ export function createMarkdownExportFile(
 
 export function previewExportMarkdown(data: MarkdownExportData): string {
   return renderMarkdownExport(data);
+}
+
+export async function exportCurrentArticle(
+  data: Week3MarkdownExportData,
+): Promise<Week3MarkdownExportFile> {
+  return createMarkdownExportFile(data);
 }
 
 export function downloadMarkdownFile(data: MarkdownExportData): MarkdownExportFile {
