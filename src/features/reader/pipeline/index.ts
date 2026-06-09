@@ -8,6 +8,8 @@ export interface Week2ReaderPipeline {
     articleId: string;
     sourceHtml: string;
     url?: string;
+    contentText?: string;
+    summary?: string;
   }): Promise<Week2ArticleContent>;
 }
 
@@ -15,7 +17,19 @@ export function createReaderPipeline(): Week2ReaderPipeline {
   return {
     async runPipeline(input) {
       const now = new Date().toISOString();
-      const sourceHtml = input.sourceHtml || '';
+
+      // Fallback chain: sourceHtml → contentText → summary
+      let sourceHtml = input.sourceHtml || '';
+      if (!sourceHtml && input.contentText) {
+        sourceHtml = `<p>${escapeHtml(input.contentText)}</p>`;
+      }
+      if (!sourceHtml && input.summary) {
+        sourceHtml = `<p>${escapeHtml(input.summary)}</p>`;
+      }
+      if (!sourceHtml) {
+        sourceHtml = '<p>No readable content.</p>';
+      }
+
       const cleanedHtml = cleanHtml(sourceHtml);
       const canonicalMarkdown = htmlToMarkdown(cleanedHtml);
 
@@ -73,6 +87,14 @@ export function htmlToMarkdown(cleanedHtml: string): string {
       .join('\n')
       .trim()
   );
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function extractBody(html: string): string {

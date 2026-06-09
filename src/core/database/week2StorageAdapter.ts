@@ -81,11 +81,13 @@ export function createWeek2StoragePort(db: Database.Database): Week2StoragePort 
 
         results.push(mapEntryToWeek2Article(entry));
 
-        // Save minimal content if contentHtml/contentText is provided
-        if (a.contentHtml || a.contentText) {
-          const sourceHtml = a.contentHtml ?? a.contentText ?? '';
-          const cleanedHtml = a.contentHtml ?? a.contentText ?? '';
-          const canonicalMarkdown = a.contentText ?? stripHtmlTags(a.contentHtml ?? '');
+        // Save minimal content with fallback: contentHtml → contentText → summary
+        const hasContent = a.contentHtml || a.contentText || a.summary;
+        if (hasContent) {
+          const fallbackHtml = a.summary ? `<p>${a.summary.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>` : '';
+          const sourceHtml = a.contentHtml || a.contentText || fallbackHtml || '';
+          const cleanedHtml = a.contentHtml || a.contentText || fallbackHtml || '';
+          const canonicalMarkdown = a.contentText || (a.contentHtml ? stripHtmlTags(a.contentHtml) : '') || a.summary || '';
 
           contentStore.upsert({
             entryId: entry.id,

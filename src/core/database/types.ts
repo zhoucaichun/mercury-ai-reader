@@ -519,5 +519,7 @@ export interface Week2ReaderPipeline {
     articleId: string;
     sourceHtml: string;
     url?: string;
+    contentText?: string;
+    summary?: string;
   }): Promise<Week2ArticleContent>;
 }
