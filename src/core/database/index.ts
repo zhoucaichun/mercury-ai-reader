@@ -67,6 +67,23 @@ export type {
 export { toArticleContent } from './types';
 
 // ═══════════════════════════════════════════════════════════════
+// Week 3 AI / Export / Usage types (AGENTS.md §5B)
+// ═══════════════════════════════════════════════════════════════
+export type {
+  Week3SummaryResult,
+  Week3TranslationResult,
+  Week3LLMPurpose,
+  Week3LLMUsageEvent,
+  Week3LLMUsageSummary,
+} from './types';
+
+export {
+  toWeek3SummaryResult,
+  toWeek3TranslationResult,
+  toWeek3UsageEvent,
+} from './types';
+
+// ═══════════════════════════════════════════════════════════════
 // Init
 // ═══════════════════════════════════════════════════════════════
 export { initDatabase, createInMemoryDatabase } from './init';
@@ -91,6 +108,19 @@ export type { IContentStore, ContentInsert } from './stores/contentStore';
 
 export { createAppSettingsStore } from './stores/appSettingsStore';
 export type { IAppSettingsStore } from './stores/appSettingsStore';
+
+// Week 3 AI stores
+export { createAgentTaskRunStore } from './stores/agentTaskRunStore';
+export type { IAgentTaskRunStore } from './stores/agentTaskRunStore';
+
+export { createSummaryResultStore } from './stores/summaryResultStore';
+export type { ISummaryResultStore } from './stores/summaryResultStore';
+
+export { createTranslationResultStore } from './stores/translationResultStore';
+export type { ITranslationResultStore } from './stores/translationResultStore';
+
+export { createLLMUsageEventStore } from './stores/llmUsageEventStore';
+export type { ILLMUsageEventStore } from './stores/llmUsageEventStore';
 
 // ═══════════════════════════════════════════════════════════════
 // Seed
