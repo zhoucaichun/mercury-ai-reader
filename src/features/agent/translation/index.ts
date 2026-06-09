@@ -243,7 +243,7 @@ export function createTranslateArticle(deps: TranslateArticleDeps = {}) {
           targetLanguage: request.targetLanguage,
           sourceLanguage: request.sourceLanguage,
           // T8 RuntimeLLMResult uses "text" field
-          markdown: (out as any).text ?? out.content ?? "",
+          markdown: out.text ?? "",
           providerId: out.providerId,
           providerName: out.providerName,
           model: out.model,
