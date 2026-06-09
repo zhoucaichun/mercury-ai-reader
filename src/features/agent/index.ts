@@ -1,5 +1,6 @@
 export * from './summary';
 export * from './translation';
+
 export {
   LLM_PROVIDER_PRESETS,
   chatCompletionsUrl,
@@ -13,8 +14,9 @@ export {
   createLLMProvider,
   createWeek3LLMProvider,
   estimateTokensFromMessages,
-  estimateTokensFromText
+  estimateTokensFromText,
 } from './providers';
+
 export type {
   LLMChatMessage,
   LLMChatRequest,
@@ -26,7 +28,7 @@ export type {
   LLMProviderKind,
   LLMProviderPreset,
   LLMUsageInfo,
-  RedactedLLMProviderConfig
+  RedactedLLMProviderConfig,
 } from './providers';
 
 export type ProviderCallStatus = 'idle' | 'running' | 'succeeded' | 'failed';
@@ -43,9 +45,9 @@ export type ProviderCallResult = {
 export const agentFeature = {
   key: 'agent',
   ownerTasks: ['T8', 'T9', 'T10', 'T11'],
-  status: 'provider-contract-placeholder'
+  status: 'week3-contract',
 } as const;
 
-export * from "./runtime/types";
-export * from "./runtime/runner";
-export * from "./prompts";
+export * from './runtime/types';
+export * from './runtime/runner';
+export * from './prompts';

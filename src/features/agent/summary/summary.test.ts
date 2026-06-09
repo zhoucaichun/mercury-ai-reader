@@ -151,7 +151,7 @@ function createRuntimeReturning(
     ): Promise<AgentRunResult<TOutput>> {
       const summaryInput = input.input as SummaryRequest;
       const output: RuntimeLLMResult = {
-        text: render(summaryInput),
+        content: render(summaryInput),
         providerId: "runtime-provider",
         providerName: "Runtime Provider",
         model: input.model,

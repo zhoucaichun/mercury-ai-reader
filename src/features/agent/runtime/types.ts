@@ -160,3 +160,18 @@ export interface Week3RuntimeTaskState {
   errorCode?: Week3AgentErrorCode;
   errorMessage?: string;
 }
+
+export type AgentStatus = Week3AgentStatus;
+export type PersistedAgentStatus = Week3PersistedAgentStatus;
+export type AgentType = Week3AgentType;
+export type AgentErrorCode = Week3AgentErrorCode;
+export type RuntimeUsage = Week3RuntimeUsage;
+export type RuntimeLLMResult = Week3RuntimeLLMResult;
+export type AgentRunInput<TInput = Record<string, unknown>> =
+  Week3AgentRunInput<TInput>;
+export type AgentRunResult<TOutput = RuntimeLLMResult> =
+  Week3AgentRunResult<TOutput>;
+export type PromptTemplateMessage = Week3PromptMessage;
+export type PromptTemplate = Week3PromptTemplate;
+export type LLMChatProvider = Week3LLMProvider;
+export type AgentRuntime = Week3AgentRuntime;

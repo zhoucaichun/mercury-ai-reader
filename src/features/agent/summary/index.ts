@@ -1,4 +1,4 @@
-import { createMockAgentRuntime } from "../runtime/runner";
+import { createWeek3AgentRuntime } from "../runtime/runner";
 import type {
   AgentRuntime,
   AgentRunResult,
@@ -81,7 +81,7 @@ const DEFAULT_MODEL = "mock-summary-v1";
 export function createSummaryAgent(
   options: CreateSummaryAgentOptions = {},
 ): SummaryAgent {
-  const runtime = options.runtime ?? createMockAgentRuntime();
+  const runtime = options.runtime ?? createWeek3AgentRuntime();
   const usageStore = options.usageStore;
   const now = options.now ?? (() => new Date());
   const idFactory = options.idFactory ?? createSummaryId;
@@ -170,7 +170,7 @@ export function createSummaryAgent(
       taskRunId: taskId,
       targetLanguage: request.targetLanguage,
       detailLevel: request.detailLevel,
-      markdown: output.text,
+      markdown: output.content,
       providerId: output.providerId,
       providerName: output.providerName,
       model: output.model,
@@ -210,7 +210,7 @@ export function generateSummary(
 
 export function createMockSummaryAgent(): SummaryAgent {
   return createSummaryAgent({
-    runtime: createMockAgentRuntime(),
+    runtime: createWeek3AgentRuntime(),
     usageStore: new InMemoryLLMUsageEventStore(),
   });
 }

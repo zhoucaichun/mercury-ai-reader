@@ -22,7 +22,9 @@
     "pack:win": "npm run build && electron-builder --win portable",
     "pack:win:zip": "npm run build && electron-builder --win zip",
     "smoke:feed": "tsx scripts/smoke-feed.ts",
-    "smoke:week2": "npx tsx src/features/feed/sync/smoke-week2.ts"
+    "smoke:week2": "npx tsx src/features/feed/sync/smoke-week2.ts",
+    "smoke:translation": "npx tsx scripts/smoke-translation.ts",
+    "smoke:translation:real": "npx tsx scripts/smoke-translation-real.ts"
   },
   "build": {
     "appId": "edu.ecnu.mercury-ai-reader",

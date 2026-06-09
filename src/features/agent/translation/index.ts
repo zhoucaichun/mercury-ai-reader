@@ -9,6 +9,12 @@ import {
   InMemoryLLMUsageEventStore,
   type LLMUsageEventStore,
 } from "../../usage/usage";
+import type {
+  AgentRuntime,
+  AgentRunInput,
+  AgentRunResult,
+  RuntimeLLMResult,
+} from "../runtime/types";
 
 export type TranslationTargetLanguage = "zh-CN" | "en-US" | string;
 
@@ -168,6 +174,91 @@ export function createMockTranslationAgent(): TranslationAgent {
   });
 }
 
+export interface TranslateArticleDeps {
+  runtime?: AgentRuntime;
+  provider?: LLMProvider;
+  usageStore?: LLMUsageEventStore;
+}
+
+export function createTranslateArticle(deps: TranslateArticleDeps = {}) {
+  const directAgent = createTranslationAgent({
+    provider:
+      deps.provider ??
+      new MockLLMProvider({
+        providerId: "mock-provider",
+        providerName: "Mock Provider",
+        kind: "mock",
+        baseUrl: "mock://local",
+        model: "mock-translation-v1",
+      }),
+    usageStore: deps.usageStore,
+  });
+
+  async function translateArticle(
+    request: TranslationRequest,
+  ): Promise<TranslationResult> {
+    if (deps.runtime) {
+      const taskId = `translation-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const runInput: AgentRunInput<TranslationRequest> = {
+        taskId,
+        agentType: "translation",
+        templateId: "translation.default",
+        input: request,
+        providerId: deps.provider?.config.providerId ?? "mock-provider",
+        providerName: deps.provider?.config.providerName,
+        model: request.model ?? deps.provider?.config.model ?? "mock-model",
+        metadata: {
+          articleId: request.articleId,
+          contentId: request.contentId,
+          targetLanguage: request.targetLanguage,
+        },
+      };
+
+      const runResult: AgentRunResult<RuntimeLLMResult> =
+        await deps.runtime.runAgent(runInput);
+
+      if (runResult.status === "succeeded" && runResult.output) {
+        const output = runResult.output;
+        const now = new Date().toISOString();
+        return {
+          id: taskId,
+          articleId: request.articleId,
+          contentId: request.contentId,
+          targetLanguage: request.targetLanguage,
+          sourceLanguage: request.sourceLanguage,
+          markdown: output.content,
+          providerId: output.providerId,
+          providerName: output.providerName,
+          model: output.model,
+          promptTokens: output.usage?.promptTokens,
+          completionTokens: output.usage?.completionTokens,
+          totalTokens: output.usage?.totalTokens,
+          estimated: output.usage?.estimated,
+          createdAt: now,
+          updatedAt: now,
+        };
+      }
+
+      throw new Error(
+        runResult.errorMessage ?? "Translation failed via Agent Runtime.",
+      );
+    }
+
+    const agentResult = await directAgent.translate(request);
+
+    if (agentResult.status === "failed" || !agentResult.result) {
+      throw new Error(agentResult.errorMessage ?? "Translation failed.");
+    }
+
+    return agentResult.result;
+  }
+
+  return { translateArticle };
+}
+
+const defaultTranslateArticle = createTranslateArticle();
+export const translateArticle = defaultTranslateArticle.translateArticle;
+
 function createTranslationResultId(): string {
   return `translation-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -183,5 +274,5 @@ function normalizeTranslationError(error: unknown): string {
 export const translationFeature = {
   key: "translation",
   ownerTasks: ["T11"],
-  status: "mock-agent-aligned-with-provider-usage",
+  status: "week3-runtime-provider-dual-path",
 } as const;
