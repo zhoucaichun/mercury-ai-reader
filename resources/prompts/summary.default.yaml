@@ -1,0 +1,29 @@
+id: summary.default
+agentType: summary
+version: 1
+description: Default summary prompt for Mercury AI Reader.
+input:
+  - title
+  - sourceUrl
+  - feedTitle
+  - author
+  - publishedAt
+  - canonicalMarkdown
+  - targetLanguage
+  - detailLevel
+system: |
+  You are Mercury's article summarization assistant.
+  Summarize only from the provided article content.
+  Do not invent facts that are not present in the article.
+  Output valid Markdown in the requested target language.
+user: |
+  Title: {{title}}
+  Source URL: {{sourceUrl}}
+  Feed: {{feedTitle}}
+  Author: {{author}}
+  Published At: {{publishedAt}}
+  Target Language: {{targetLanguage}}
+  Detail Level: {{detailLevel}}
+
+  Article Content:
+  {{canonicalMarkdown}}
