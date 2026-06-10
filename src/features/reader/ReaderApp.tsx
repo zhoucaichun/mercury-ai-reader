@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type FocusEvent, type MouseEvent, type ReactNode } from 'react';
 import {
   BarChart3,
   BookOpen,
+  ChevronDown,
+  ChevronUp,
   CheckCircle2,
   CircleAlert,
   Clock,
@@ -12,7 +14,10 @@ import {
   ExternalLink,
   FileText,
   FolderInput,
+  HelpCircle,
   Languages,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   RefreshCw,
   RotateCcw,
@@ -21,7 +26,8 @@ import {
   Sparkles,
   Star,
   Trash2,
-  Wifi
+  Wifi,
+  X
 } from 'lucide-react';
 import type {
   AgentRunStatus,
@@ -32,11 +38,250 @@ import type {
   FeedStatus,
   Week2ReaderDataPort
 } from '../../core/types';
+import { formatTokenCount, summarizeUsage } from '../usage/usage';
+import type { LLMUsageEvent } from '../usage/types';
+import {
+  createBrowserWeek3AgentUiPort,
+  type Week3AgentUiPort,
+  type Week3SummaryDetailLevel,
+  type Week3SummaryResult,
+  type Week3TranslationResult
+} from './week3AgentUiPort';
 
-type ActivePanel = AgentTaskType | 'usage' | 'settings';
+type ActivePanel = AgentTaskType | 'usage';
+type DialogType = 'help' | 'settings' | null;
+type UiLanguage = 'zh' | 'en';
 type FontSizeSetting = 'small' | 'medium' | 'large';
 type LineHeightSetting = 'compact' | 'comfortable' | 'loose';
 type SyncStatus = 'idle' | 'running' | 'succeeded' | 'failed';
+type UsageStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+const uiCopy = {
+  zh: {
+    addFeed: '添加订阅',
+    aiProvider: 'AI Provider',
+    aiSettings: 'AI 设置',
+    allReady: '正文已就绪，可以生成摘要或翻译。',
+    appSubtitle: '同步 Feed，阅读文章，并用 AI 生成摘要、翻译和 Markdown 导出。',
+    articles: '文章',
+    auto: '自动',
+    brief: '简短',
+    browserPreview: '浏览器预览',
+    calls: '调用',
+    canonicalMarkdown: 'canonicalMarkdown',
+    chinese: '中文',
+    clear: '清空',
+    clearSummary: '清空当前摘要或翻译结果',
+    collapseAi: '收起 AI 面板',
+    collapseArticles: '收起文章列表',
+    collapseFeeds: '收起订阅栏',
+    collapseNav: '收起左侧',
+    compact: '紧凑',
+    comfortable: '舒适',
+    copy: '复制',
+    copied: '已复制到剪贴板。',
+    copyResult: '复制当前 AI 结果到剪贴板',
+    detail: '详细度',
+    delete: '删除',
+    disable: '停用',
+    enable: '启用',
+    english: '英文',
+    export: '导出',
+    exportMarkdown: '导出当前文章 Markdown，包含已有摘要和翻译',
+    failed: '失败',
+    feedUrlPlaceholder: 'Feed URL，留空默认源',
+    feeds: '订阅源',
+    fontSize: '字号',
+    generate: '生成',
+    generating: '生成中',
+    help: '说明',
+    helpBody: [
+      '输入 Feed URL 后点击“同步订阅源”；留空点击会同步默认示例源。',
+      '在中间列表选择文章。正文加载完成后，可以直接生成摘要、翻译或导出 Markdown。',
+      'AI 面板用于调整摘要语言、翻译语言和查看模型调用记录。',
+      '点击阅读区左侧的小按钮可以收起或展开左侧列表，进入专注阅读。',
+      '当前 AI 输出使用 mock fallback，用于演示流程和记录 usage；接入真实 Provider 后会显示模型输出。'
+    ],
+    helpTitle: '使用说明',
+    importOpml: '导入 OPML',
+    interfaceLanguage: '界面语言',
+    japanese: '日文',
+    large: '大',
+    lineHeight: '行距',
+    localStorage: '本地存储',
+    loadingArticles: '正在加载文章...',
+    loadingContent: '正在加载正文...',
+    loadingFeeds: '正在加载订阅源...',
+    loadingUsage: '正在加载 usage...',
+    loose: '宽松',
+    medium: '中',
+    mockProvider: 'Mock provider fallback',
+    invalidFeedUrl: 'Feed URL 格式不正确。请检查是否以 http:// 或 https:// 开头，然后重试。',
+    noArticle: '选择一篇文章开始阅读',
+    noArticleBody: '左侧同步订阅源，中间选择文章；随后可以阅读正文、生成摘要、翻译并导出 Markdown。',
+    noArticleContent: '这篇文章还没有保存正文。请重新同步订阅源后再试。',
+    noArticles: '当前没有匹配文章。可以切换订阅源、清空搜索词，或重新同步。',
+    noFeeds: '还没有订阅源。输入 Feed URL 后同步，或留空同步默认源。',
+    noUsage: '暂无 usage 记录。',
+    openElectron: '请在 Electron 应用中运行真实 Feed 同步。',
+    provider: 'Provider',
+    read: '已读',
+    readTooltip: '文章已读，点击标记为未读',
+    readingSettings: '阅读设置',
+    refresh: '刷新',
+    refreshUsage: '刷新模型调用统计',
+    regenerate: '重新生成',
+    retranslate: '重新翻译',
+    save: '收藏',
+    saveTooltip: '点击收藏当前文章',
+    saved: '已收藏',
+    savedTooltip: '文章已收藏，点击取消收藏',
+    searchPlaceholder: '搜索',
+    settings: '设置',
+    closeDialog: '关闭窗口',
+    showArticles: '展开文章列表',
+    showAi: '展开 AI 面板',
+    showFeeds: '展开订阅栏',
+    showNav: '展开左侧',
+    small: '小',
+    source: '原文',
+    sourceTooltip: '在浏览器中打开文章原文',
+    sourceLanguage: '源语言',
+    standard: '标准',
+    succeeded: '成功',
+    summary: '摘要',
+    summaryTooltip: '为当前文章生成摘要',
+    summaryHint: '点击生成当前文章的摘要。',
+    summarizing: '摘要中',
+    syncFeeds: '同步订阅源',
+    syncHelp: '留空会同步默认真实订阅源；填写 RSS/Atom 地址会只同步该订阅源。',
+    syncing: '同步中',
+    targetLanguage: '目标语言',
+    tokens: 'tokens',
+    translate: '翻译',
+    translateTooltip: '将当前文章翻译为目标语言',
+    translating: '翻译中',
+    translationHint: '点击翻译当前文章正文。',
+    unread: '未读',
+    unreadTooltip: '点击标记文章为已读',
+    usage: '用量',
+    usageTooltip: '查看摘要和翻译的模型调用统计',
+    usageRecords: 'Usage 记录',
+    welcomeSteps: ['1. 同步订阅源', '2. 选择文章', '3. 摘要、翻译或导出']
+  },
+  en: {
+    addFeed: 'Add Feed',
+    aiProvider: 'AI Provider',
+    aiSettings: 'AI Settings',
+    allReady: 'Article content is ready for summary or translation.',
+    appSubtitle: 'Sync feeds, read articles, and use AI for summaries, translations, and Markdown export.',
+    articles: 'Articles',
+    auto: 'Auto',
+    brief: 'Brief',
+    browserPreview: 'Browser preview',
+    calls: 'Calls',
+    canonicalMarkdown: 'canonicalMarkdown',
+    chinese: 'Chinese',
+    clear: 'Clear',
+    clearSummary: 'Clear the current summary or translation result.',
+    collapseAi: 'Collapse AI Panel',
+    collapseArticles: 'Collapse Article List',
+    collapseFeeds: 'Collapse Feeds',
+    collapseNav: 'Collapse Sidebar',
+    compact: 'Compact',
+    comfortable: 'Comfortable',
+    copy: 'Copy',
+    copied: 'Copied to clipboard.',
+    copyResult: 'Copy the current AI result to clipboard.',
+    detail: 'Detail',
+    delete: 'Delete',
+    disable: 'Disable',
+    enable: 'Enable',
+    english: 'English',
+    export: 'Export',
+    exportMarkdown: 'Export this article as Markdown, including summary and translation when available.',
+    failed: 'Failed',
+    feedUrlPlaceholder: 'Feed URL, empty for defaults',
+    feeds: 'Feeds',
+    fontSize: 'Font size',
+    generate: 'Generate',
+    generating: 'Generating',
+    help: 'Help',
+    helpBody: [
+      'Enter a Feed URL and click Sync Feeds. Leave it empty to sync the default sample sources.',
+      'Select an article in the middle list. Once content loads, you can summarize, translate, or export Markdown.',
+      'Use the AI panel to adjust summary language, translation language, and inspect usage records.',
+      'Use the small button on the left edge of the reader to hide or show the lists for focused reading.',
+      'AI output currently uses a mock fallback for the workflow and usage records. Real provider output can replace it later.'
+    ],
+    helpTitle: 'How to Use',
+    importOpml: 'Import OPML',
+    interfaceLanguage: 'Interface language',
+    japanese: 'Japanese',
+    large: 'Large',
+    lineHeight: 'Line height',
+    localStorage: 'Local storage',
+    loadingArticles: 'Loading articles...',
+    loadingContent: 'Loading article content...',
+    loadingFeeds: 'Loading feeds...',
+    loadingUsage: 'Loading usage...',
+    loose: 'Loose',
+    medium: 'Medium',
+    mockProvider: 'Mock provider fallback',
+    invalidFeedUrl: 'The Feed URL is invalid. Check that it starts with http:// or https://, then try again.',
+    noArticle: 'Choose an article to start reading',
+    noArticleBody: 'Sync feeds on the left, choose an article in the middle, then read, summarize, translate, or export it.',
+    noArticleContent: 'This article has no saved content yet. Sync the feed again and try later.',
+    noArticles: 'No matching articles. Switch feeds, clear the search field, or sync again.',
+    noFeeds: 'No feeds yet. Enter a Feed URL, or leave it empty to sync default sources.',
+    noUsage: 'No usage events yet.',
+    openElectron: 'Open the Electron app to run the real Feed sync chain.',
+    provider: 'Provider',
+    read: 'Read',
+    readTooltip: 'This article is read. Click to mark it unread.',
+    readingSettings: 'Reading Settings',
+    refresh: 'Refresh',
+    refreshUsage: 'Refresh model usage statistics.',
+    regenerate: 'Regenerate',
+    retranslate: 'Retranslate',
+    save: 'Save',
+    saveTooltip: 'Save this article.',
+    saved: 'Saved',
+    savedTooltip: 'This article is saved. Click to unsave it.',
+    searchPlaceholder: 'Search',
+    settings: 'Settings',
+    closeDialog: 'Close window',
+    showArticles: 'Show Article List',
+    showAi: 'Show AI Panel',
+    showFeeds: 'Show Feeds',
+    showNav: 'Show Sidebar',
+    small: 'Small',
+    source: 'Source',
+    sourceTooltip: 'Open the original article in your browser.',
+    sourceLanguage: 'Source language',
+    standard: 'Standard',
+    succeeded: 'Succeeded',
+    summary: 'Summary',
+    summaryTooltip: 'Generate a summary for the current article.',
+    summaryHint: 'Generate a summary for the current article.',
+    summarizing: 'Summarizing',
+    syncFeeds: 'Sync feeds',
+    syncHelp: 'Leave empty to sync default real feeds, or paste an RSS/Atom URL to sync only that feed.',
+    syncing: 'Syncing',
+    targetLanguage: 'Target language',
+    tokens: 'tokens',
+    translate: 'Translate',
+    translateTooltip: 'Translate the current article to the target language.',
+    translating: 'Translating',
+    translationHint: 'Translate the current article content.',
+    unread: 'Unread',
+    unreadTooltip: 'Mark this article as read.',
+    usage: 'Usage',
+    usageTooltip: 'View model call statistics for summary and translation.',
+    usageRecords: 'Usage records',
+    welcomeSteps: ['1. Sync feeds', '2. Choose an article', '3. Summarize, translate, or export']
+  }
+} as const;
 
 const statusLabels: Record<FeedStatus, string> = {
   ready: 'Ready',
@@ -84,15 +329,12 @@ function formatDate(value?: string) {
   }).format(new Date(value));
 }
 
-function downloadMarkdown(article: Article, content: ArticleContent | null) {
-  if (!content?.canonicalMarkdown) return;
-
-  const safeTitle = article.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const blob = new Blob([content.canonicalMarkdown], { type: 'text/markdown;charset=utf-8' });
+function downloadMarkdownExport(file: { fileName: string; markdown: string }) {
+  const blob = new Blob([file.markdown], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = `${safeTitle || 'mercury-article'}.md`;
+  anchor.download = file.fileName;
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -147,13 +389,19 @@ function FeedRow({
   selected,
   onSelect,
   onToggleEnabled,
-  onDelete
+  onDelete,
+  labels
 }: {
   feed: Feed;
   selected: boolean;
   onSelect: () => void;
   onToggleEnabled: () => void;
   onDelete: () => void;
+  labels: {
+    enable: string;
+    disable: string;
+    delete: string;
+  };
 }) {
   const status = feed.isEnabled === false ? 'error' : feed.status;
 
@@ -170,11 +418,11 @@ function FeedRow({
         </span>
       </button>
       <span className="feed-row-tools">
-        <button className="mini-button" type="button" onClick={onToggleEnabled}>
-          {feed.isEnabled === false ? 'Enable' : 'Disable'}
+        <button className="mini-button" type="button" title={feed.isEnabled === false ? labels.enable : labels.disable} onClick={onToggleEnabled}>
+          {feed.isEnabled === false ? labels.enable : labels.disable}
         </button>
-        <button className="mini-button is-danger" type="button" onClick={onDelete}>
-          Delete
+        <button className="mini-button is-danger" type="button" title={labels.delete} onClick={onDelete}>
+          {labels.delete}
         </button>
       </span>
     </div>
@@ -185,12 +433,18 @@ function ArticleRow({
   article,
   sourceName,
   selected,
-  onSelect
+  onSelect,
+  labels
 }: {
   article: Article;
   sourceName: string;
   selected: boolean;
   onSelect: () => void;
+  labels: {
+    read: string;
+    unread: string;
+    saved: string;
+  };
 }) {
   const articleState = article as typeof article & { isRead?: boolean; isStarred?: boolean };
   const isRead = Boolean(articleState.isRead ?? articleState.readState !== 'unread');
@@ -200,6 +454,7 @@ function ArticleRow({
     <button
       className={`article-row ${selected ? 'is-selected' : ''} ${isRead ? 'is-read' : 'is-unread'} ${isStarred ? 'is-starred' : ''}`}
       type="button"
+      title={article.title}
       onClick={onSelect}
     >
       <span className="article-row-header">
@@ -207,8 +462,8 @@ function ArticleRow({
         <span>{sourceName}</span>
         <span>{formatDate(article.publishedAt)}</span>
         <span>{article.estimatedMinutes} min</span>
-        <span className={`article-state-badge ${isRead ? 'is-read' : 'is-unread'}`}>{isRead ? 'Read' : 'Unread'}</span>
-        {isStarred ? <span className="article-state-badge is-starred">Saved</span> : null}
+        <span className={`article-state-badge ${isRead ? 'is-read' : 'is-unread'}`}>{isRead ? labels.read : labels.unread}</span>
+        {isStarred ? <span className="article-state-badge is-starred">{labels.saved}</span> : null}
       </span>
       <span className="article-row-title">{article.title}</span>
       <span className="article-row-excerpt">{article.excerpt}</span>
@@ -227,16 +482,75 @@ function StatusPill({ status }: { status: AgentRunStatus }) {
   return <span className={`agent-status agent-status-${status}`}>{agentStatusLabels[status]}</span>;
 }
 
-function EmptyState({ message }: { message: string }) {
+function EmptyState({
+  actions,
+  message,
+  steps,
+  title
+}: {
+  actions?: ReactNode;
+  message: string;
+  steps?: readonly string[];
+  title: string;
+}) {
   return (
     <div className="empty-state">
-      <BookOpen size={28} aria-hidden="true" />
-      <p>{message}</p>
+      <div className="empty-state-card">
+        <BookOpen size={30} aria-hidden="true" />
+        <h2>{title}</h2>
+        <p>{message}</p>
+        {steps ? (
+          <div className="empty-steps" aria-label={title}>
+            {steps.map((step) => (
+              <span key={step}>{step}</span>
+            ))}
+          </div>
+        ) : null}
+        {actions ? <div className="empty-actions">{actions}</div> : null}
+      </div>
+    </div>
+  );
+}
+
+function DialogShell({
+  children,
+  icon,
+  onClose,
+  title,
+  closeLabel
+}: {
+  children: ReactNode;
+  icon: ReactNode;
+  onClose: () => void;
+  title: string;
+  closeLabel: string;
+}) {
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className="app-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="dialog-header">
+          <div className="dialog-title">
+            {icon}
+            <h2>{title}</h2>
+          </div>
+          <button className="icon-button" type="button" aria-label={closeLabel} title={closeLabel} onClick={onClose}>
+            <X size={18} aria-hidden="true" />
+          </button>
+        </header>
+        <div className="dialog-body">{children}</div>
+      </section>
     </div>
   );
 }
 
 export function ReaderApp() {
+  const [agentUiPort] = useState<Week3AgentUiPort>(() => createBrowserWeek3AgentUiPort());
   const [dataPort, setDataPort] = useState<Week2ReaderDataPort>(() => emptyReaderDataPort);
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
@@ -246,16 +560,35 @@ export function ReaderApp() {
   const [searchText, setSearchText] = useState('');
   const [feedUrlInput, setFeedUrlInput] = useState('');
   const [activePanel, setActivePanel] = useState<ActivePanel>('summary');
+  const [activeDialog, setActiveDialog] = useState<DialogType>(null);
+  const [uiLanguage, setUiLanguage] = useState<UiLanguage>('zh');
+  const [isFeedsCollapsed, setIsFeedsCollapsed] = useState(false);
+  const [isArticleListCollapsed, setIsArticleListCollapsed] = useState(false);
+  const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(false);
   const [fontSize, setFontSize] = useState<FontSizeSetting>('medium');
   const [lineHeight, setLineHeight] = useState<LineHeightSetting>('comfortable');
   const [feedsStatus, setFeedsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [articlesStatus, setArticlesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [contentStatus, setContentStatus] = useState<'idle' | 'loading' | 'ready' | 'empty' | 'error'>('idle');
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
-  const [syncMessage, setSyncMessage] = useState('Add a Feed URL, import OPML, or sync the default real feeds.');
+  const [syncMessage, setSyncMessage] = useState('输入 Feed URL 后点击“同步订阅源”；也可以留空同步默认源。');
   const [opmlSummary, setOpmlSummary] = useState<{ importedCount: number; skippedCount: number; messages: string[] } | null>(
     null
   );
+  const [summaryTargetLanguage, setSummaryTargetLanguage] = useState('zh-CN');
+  const [summaryDetailLevel, setSummaryDetailLevel] = useState<Week3SummaryDetailLevel>('brief');
+  const [summaryStatus, setSummaryStatus] = useState<AgentRunStatus>('idle');
+  const [summaryResult, setSummaryResult] = useState<Week3SummaryResult | null>(null);
+  const [summaryError, setSummaryError] = useState('');
+  const [translationTargetLanguage, setTranslationTargetLanguage] = useState('zh-CN');
+  const [sourceLanguage, setSourceLanguage] = useState('auto');
+  const [translationStatus, setTranslationStatus] = useState<AgentRunStatus>('idle');
+  const [translationResult, setTranslationResult] = useState<Week3TranslationResult | null>(null);
+  const [translationError, setTranslationError] = useState('');
+  const [usageEvents, setUsageEvents] = useState<LLMUsageEvent[]>([]);
+  const [usageStatus, setUsageStatus] = useState<UsageStatus>('idle');
+  const [exportMessage, setExportMessage] = useState('');
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -332,14 +665,188 @@ export function ReaderApp() {
     };
   }, [dataPort, selectedArticleId]);
 
+  useEffect(() => {
+    setSummaryStatus('idle');
+    setSummaryResult(null);
+    setSummaryError('');
+    setTranslationStatus('idle');
+    setTranslationResult(null);
+    setTranslationError('');
+    setExportMessage('');
+  }, [selectedArticleId]);
+
+  useEffect(() => {
+    void refreshUsageEvents();
+  }, [agentUiPort]);
+
+  useEffect(() => {
+    if (!activeDialog) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setActiveDialog(null);
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeDialog]);
+
   const selectedArticle = articles.find((article) => article.id === selectedArticleId);
   const selectedArticleState = selectedArticle as (typeof selectedArticle & { isRead?: boolean; isStarred?: boolean });
   const selectedArticleIsRead = Boolean(selectedArticleState?.isRead ?? selectedArticleState?.readState !== 'unread');
   const selectedArticleIsStarred = Boolean(selectedArticleState?.isStarred ?? selectedArticleState?.readState === 'saved');
   const selectedFeed = feeds.find((feed) => feed.id === selectedFeedId);
   const feedTitleById = useMemo(() => new Map(feeds.map((feed) => [feed.id, feed.title])), [feeds]);
+  const usageSummary = useMemo(() => summarizeUsage(usageEvents, { recentLimit: 6 }), [usageEvents]);
   const runtime = window.mercury;
   const readerClassName = `reader-content reader-font-${fontSize} reader-line-${lineHeight}`;
+  const hasCanonicalMarkdown = Boolean(selectedContent?.canonicalMarkdown.trim());
+  const copy = uiCopy[uiLanguage];
+  const shellClassName = [
+    'app-shell',
+    isFeedsCollapsed ? 'is-feeds-collapsed' : '',
+    isArticleListCollapsed ? 'is-articles-collapsed' : ''
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  useEffect(() => {
+    if (syncStatus === 'idle') {
+      setSyncMessage(copy.syncHelp);
+    }
+  }, [copy.syncHelp, syncStatus]);
+
+  function tooltipProps(text: string) {
+    const placeTooltip = (rect: DOMRect) => {
+      const tooltipWidth = Math.min(280, window.innerWidth - 32);
+      return {
+        text,
+        x: Math.min(Math.max(rect.left + rect.width / 2, tooltipWidth / 2 + 16), window.innerWidth - tooltipWidth / 2 - 16),
+        y: rect.bottom + 10
+      };
+    };
+
+    return {
+      'data-tooltip': text,
+      onMouseEnter(event: MouseEvent<HTMLElement>) {
+        setTooltip(placeTooltip(event.currentTarget.getBoundingClientRect()));
+      },
+      onMouseLeave() {
+        setTooltip(null);
+      },
+      onFocus(event: FocusEvent<HTMLElement>) {
+        setTooltip(placeTooltip(event.currentTarget.getBoundingClientRect()));
+      },
+      onBlur() {
+        setTooltip(null);
+      }
+    };
+  }
+
+  async function refreshUsageEvents() {
+    if (!agentUiPort.listUsageEvents) {
+      return;
+    }
+
+    setUsageStatus('loading');
+    try {
+      setUsageEvents(await agentUiPort.listUsageEvents());
+      setUsageStatus('ready');
+    } catch {
+      setUsageStatus('error');
+    }
+  }
+
+  function createSelectedArticleInput() {
+    if (!selectedArticle || !selectedContent?.canonicalMarkdown.trim()) {
+      throw new Error('Select an article with canonicalMarkdown before running AI processing.');
+    }
+
+    return {
+      articleId: selectedArticle.id,
+      title: selectedArticle.title,
+      sourceUrl: selectedArticle.url,
+      feedTitle: feedTitleById.get(selectedArticle.feedId),
+      author: selectedArticle.author,
+      publishedAt: selectedArticle.publishedAt,
+      canonicalMarkdown: selectedContent.canonicalMarkdown
+    };
+  }
+
+  async function handleGenerateSummary(regenerate = false) {
+    setActivePanel('summary');
+    setIsInspectorCollapsed(false);
+    setSummaryStatus('running');
+    setSummaryError('');
+
+    try {
+      const result = await agentUiPort.generateSummary({
+        ...createSelectedArticleInput(),
+        targetLanguage: summaryTargetLanguage,
+        detailLevel: summaryDetailLevel,
+        regenerate
+      });
+      setSummaryResult(result);
+      setSummaryStatus('succeeded');
+      await refreshUsageEvents();
+    } catch (error) {
+      setSummaryStatus('failed');
+      setSummaryError(error instanceof Error ? error.message : 'Summary generation failed.');
+      await refreshUsageEvents();
+    }
+  }
+
+  async function handleTranslateArticle(regenerate = false) {
+    setActivePanel('translation');
+    setIsInspectorCollapsed(false);
+    setTranslationStatus('running');
+    setTranslationError('');
+
+    try {
+      const result = await agentUiPort.translateArticle({
+        ...createSelectedArticleInput(),
+        sourceLanguage: sourceLanguage === 'auto' ? undefined : sourceLanguage,
+        targetLanguage: translationTargetLanguage,
+        regenerate
+      });
+      setTranslationResult(result);
+      setTranslationStatus('succeeded');
+      await refreshUsageEvents();
+    } catch (error) {
+      setTranslationStatus('failed');
+      setTranslationError(error instanceof Error ? error.message : 'Translation failed.');
+      await refreshUsageEvents();
+    }
+  }
+
+  async function handleExportCurrentArticle() {
+    if (!selectedArticle || !selectedContent?.canonicalMarkdown.trim()) return;
+
+    try {
+      const file = await agentUiPort.exportCurrentArticle({
+        title: selectedArticle.title,
+        url: selectedArticle.url,
+        author: selectedArticle.author,
+        publishedAt: selectedArticle.publishedAt,
+        feedTitle: feedTitleById.get(selectedArticle.feedId),
+        canonicalMarkdown: selectedContent.canonicalMarkdown,
+        summaryMarkdown: summaryResult?.articleId === selectedArticle.id ? summaryResult.markdown : undefined,
+        translationMarkdown:
+          translationResult?.articleId === selectedArticle.id ? translationResult.markdown : undefined
+      });
+      downloadMarkdownExport(file);
+      setExportMessage(`${copy.export}: ${file.fileName}`);
+    } catch (error) {
+      setExportMessage(error instanceof Error ? error.message : 'Markdown export failed.');
+    }
+  }
+
+  async function handleCopyAgentOutput(output?: string) {
+    if (!output?.trim()) return;
+    await navigator.clipboard?.writeText(output);
+    setExportMessage(copy.copied);
+  }
 
   function handleFeedSelect(feedId: string) {
     setSelectedFeedId(feedId);
@@ -384,15 +891,28 @@ export function ReaderApp() {
   async function handleRunWeek2Sync() {
     if (!runtime?.runWeek2Sync) {
       setSyncStatus('failed');
-      setSyncMessage('Open the Electron app to run the real Feed sync chain.');
+      setSyncMessage(copy.openElectron);
       return;
     }
 
     const feedUrl = feedUrlInput.trim();
     const feedUrls = feedUrl ? [feedUrl] : undefined;
 
+    if (feedUrl) {
+      try {
+        const parsedUrl = new URL(feedUrl);
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+          throw new Error(copy.invalidFeedUrl);
+        }
+      } catch {
+        setSyncStatus('failed');
+        setSyncMessage(copy.invalidFeedUrl);
+        return;
+      }
+    }
+
     setSyncStatus('running');
-    setSyncMessage(feedUrl ? 'Syncing the entered Feed URL...' : 'Syncing the default real Feed sources...');
+    setSyncMessage(feedUrl ? `${copy.syncing} ${feedUrl}...` : `${copy.syncing}...`);
     setFeeds((currentFeeds) => currentFeeds.map((feed) => ({ ...feed, status: 'syncing' })));
 
     try {
@@ -451,40 +971,42 @@ export function ReaderApp() {
   }
 
   return (
-    <main className="app-shell">
-      <aside className="sidebar" aria-label="Feeds">
+    <main className={shellClassName}>
+      <aside className="sidebar" aria-label={copy.feeds}>
         <div className="brand-block">
           <div>
             <p className="eyebrow">Mercury</p>
             <h1>AI Reader</h1>
+            <p className="brand-subtitle">{copy.appSubtitle}</p>
           </div>
-          <button
-            className={activePanel === 'settings' ? 'icon-button is-active' : 'icon-button'}
-            type="button"
-            aria-label="Reader settings"
-            title="Reader settings"
-            onClick={() => setActivePanel('settings')}
-          >
-            <Settings size={18} aria-hidden="true" />
-          </button>
+          <div className="brand-actions">
+            <button
+              className={activeDialog === 'help' ? 'icon-button is-active' : 'icon-button'}
+              type="button"
+              aria-label={copy.help}
+              {...tooltipProps(copy.helpTitle)}
+              onClick={() => setActiveDialog('help')}
+            >
+              <HelpCircle size={18} aria-hidden="true" />
+            </button>
+            <button
+              className={activeDialog === 'settings' ? 'icon-button is-active' : 'icon-button'}
+              type="button"
+              aria-label={copy.settings}
+              {...tooltipProps(copy.readingSettings)}
+              onClick={() => setActiveDialog('settings')}
+            >
+              <Settings size={18} aria-hidden="true" />
+            </button>
+          </div>
         </div>
 
         <div className="sidebar-actions">
-          <button className="primary-button" type="button" onClick={handleRunWeek2Sync} disabled={syncStatus === 'running'}>
-            <Plus size={17} aria-hidden="true" />
-            {syncStatus === 'running' ? 'Syncing' : 'Add Feed'}
+          <button className="primary-button" type="button" {...tooltipProps(copy.syncHelp)} onClick={handleRunWeek2Sync} disabled={syncStatus === 'running'}>
+            {syncStatus === 'running' ? <RefreshCw className="spin-icon" size={17} aria-hidden="true" /> : <Plus size={17} aria-hidden="true" />}
+            {syncStatus === 'running' ? copy.syncing : copy.addFeed}
           </button>
-          <button
-            className="icon-button"
-            type="button"
-            aria-label="Sync feeds"
-            title="Sync feeds"
-            onClick={handleRunWeek2Sync}
-            disabled={syncStatus === 'running'}
-          >
-            <RefreshCw className={syncStatus === 'running' ? 'spin-icon' : ''} size={18} aria-hidden="true" />
-          </button>
-          <label className={syncStatus === 'running' ? 'icon-button is-disabled' : 'icon-button'} aria-label="Import OPML" title="Import OPML">
+          <label className={syncStatus === 'running' ? 'icon-button is-disabled' : 'icon-button'} aria-label={copy.importOpml} {...tooltipProps(copy.importOpml)}>
             <FolderInput size={18} aria-hidden="true" />
             <input
               accept=".opml,.xml,text/xml"
@@ -502,14 +1024,16 @@ export function ReaderApp() {
           <Wifi size={17} aria-hidden="true" />
           <input
             aria-label="Feed URL"
-            placeholder="Feed URL, empty uses default feeds"
+            placeholder={copy.feedUrlPlaceholder}
             type="url"
             value={feedUrlInput}
             onChange={(event) => setFeedUrlInput(event.target.value)}
           />
         </label>
 
-        <div className={`sync-message sync-message-${syncStatus}`}>{syncMessage}</div>
+        <div className={`sync-message sync-message-${syncStatus}`} aria-live="polite">
+          {syncMessage}
+        </div>
 
         {opmlSummary ? (
           <div className="opml-summary">
@@ -529,7 +1053,7 @@ export function ReaderApp() {
           <Search size={17} aria-hidden="true" />
           <input
             aria-label="Search articles"
-            placeholder="Search"
+            placeholder={copy.searchPlaceholder}
             type="search"
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
@@ -537,10 +1061,10 @@ export function ReaderApp() {
         </label>
 
         <div className="feed-list">
-          {feedsStatus === 'loading' ? <span className="state-line">Loading feeds...</span> : null}
+          {feedsStatus === 'loading' ? <span className="state-line">{copy.loadingFeeds}</span> : null}
           {feedsStatus === 'error' ? <span className="state-line state-line-error">Feeds failed to load</span> : null}
           {feedsStatus === 'ready' && feeds.length === 0 ? (
-            <span className="state-line">No feeds yet. Click Add Feed to sync default sources.</span>
+            <span className="state-line">{copy.noFeeds}</span>
           ) : null}
           {feeds.map((feed) => (
             <FeedRow
@@ -550,32 +1074,42 @@ export function ReaderApp() {
               onSelect={() => handleFeedSelect(feed.id)}
               onToggleEnabled={() => void handleFeedSubscriptionChange(feed, { isEnabled: feed.isEnabled === false })}
               onDelete={() => void handleFeedSubscriptionChange(feed, { isDeleted: true })}
+              labels={{ enable: copy.enable, disable: copy.disable, delete: copy.delete }}
             />
           ))}
         </div>
 
         <div className="runtime-strip">
           <Cpu size={16} aria-hidden="true" />
-          <span>{runtime ? `${runtime.platform} / Electron ${runtime.versions.electron}` : 'Browser preview'}</span>
+          <span>{runtime ? `${runtime.platform} / Electron ${runtime.versions.electron}` : copy.browserPreview}</span>
         </div>
+        <button
+          className="column-edge-toggle feed-edge-toggle"
+          type="button"
+          aria-label={isFeedsCollapsed ? copy.showFeeds : copy.collapseFeeds}
+          {...tooltipProps(isFeedsCollapsed ? copy.showFeeds : copy.collapseFeeds)}
+          onClick={() => setIsFeedsCollapsed((current) => !current)}
+        >
+          {isFeedsCollapsed ? <PanelLeftOpen size={17} aria-hidden="true" /> : <PanelLeftClose size={17} aria-hidden="true" />}
+        </button>
       </aside>
 
-      <section className="article-list-panel" aria-label="Articles">
+      <section className="article-list-panel" aria-label={copy.articles}>
         <div className="panel-heading">
           <div>
             <p className="eyebrow">{selectedFeed?.title ?? 'Feeds'}</p>
-            <h2>Articles</h2>
+            <h2>{copy.articles}</h2>
           </div>
           <span className="count-label">{articles.length}</span>
         </div>
 
         <div className="article-list">
-          {articlesStatus === 'loading' ? <span className="state-line">Loading articles...</span> : null}
+          {articlesStatus === 'loading' ? <span className="state-line">{copy.loadingArticles}</span> : null}
           {articlesStatus === 'error' ? (
             <span className="state-line state-line-error">Articles failed to load</span>
           ) : null}
           {articlesStatus === 'ready' && articles.length === 0 ? (
-            <span className="state-line">No articles match this feed</span>
+            <span className="state-line">{copy.noArticles}</span>
           ) : null}
           {articles.map((article) => (
             <ArticleRow
@@ -584,9 +1118,19 @@ export function ReaderApp() {
               sourceName={feedTitleById.get(article.feedId) ?? 'Unknown feed'}
               selected={article.id === selectedArticle?.id}
               onSelect={() => setSelectedArticleId(article.id)}
+              labels={{ read: copy.read, unread: copy.unread, saved: copy.saved }}
             />
           ))}
         </div>
+        <button
+          className="column-edge-toggle article-edge-toggle"
+          type="button"
+          aria-label={isArticleListCollapsed ? copy.showArticles : copy.collapseArticles}
+          {...tooltipProps(isArticleListCollapsed ? copy.showArticles : copy.collapseArticles)}
+          onClick={() => setIsArticleListCollapsed((current) => !current)}
+        >
+          {isArticleListCollapsed ? <PanelLeftOpen size={17} aria-hidden="true" /> : <PanelLeftClose size={17} aria-hidden="true" />}
+        </button>
       </section>
 
       <section className="reader-panel" aria-label="Reader">
@@ -602,77 +1146,91 @@ export function ReaderApp() {
               <h2>{selectedArticle.title}</h2>
               <p>{selectedArticle.excerpt}</p>
               <div className="reader-actions">
-                <a className="tool-button" href={selectedArticle.url} target="_blank" rel="noreferrer">
+                <a className="tool-button" href={selectedArticle.url} target="_blank" rel="noreferrer" {...tooltipProps(copy.sourceTooltip)}>
                   <ExternalLink size={17} aria-hidden="true" />
-                  Source
+                  {copy.source}
                 </a>
                 <button
                   className={selectedArticleIsRead ? 'tool-button is-active' : 'tool-button'}
                   type="button"
-                  title={selectedArticleIsRead ? 'Current status: read. Click to mark unread.' : 'Current status: unread. Click to mark read.'}
+                  aria-label={selectedArticleIsRead ? copy.readTooltip : copy.unreadTooltip}
+                  {...tooltipProps(selectedArticleIsRead ? copy.readTooltip : copy.unreadTooltip)}
                   onClick={() => void handleArticleStateChange({ isRead: !selectedArticleIsRead })}
                 >
                   <CheckCircle2 size={17} aria-hidden="true" />
-                  {selectedArticleIsRead ? 'Read' : 'Unread'}
+                  {selectedArticleIsRead ? copy.read : copy.unread}
                 </button>
                 <button
                   className={selectedArticleIsStarred ? 'tool-button is-active' : 'tool-button'}
                   type="button"
-                  title={selectedArticleIsStarred ? 'Current status: saved. Click to unsave.' : 'Current status: not saved. Click to save.'}
+                  aria-label={selectedArticleIsStarred ? copy.savedTooltip : copy.saveTooltip}
+                  {...tooltipProps(selectedArticleIsStarred ? copy.savedTooltip : copy.saveTooltip)}
                   onClick={() => void handleArticleStateChange({ isStarred: !selectedArticleIsStarred })}
                 >
                   <Star size={17} aria-hidden="true" />
-                  {selectedArticleIsStarred ? 'Saved' : 'Save'}
+                  {selectedArticleIsStarred ? copy.saved : copy.save}
                 </button>
                 <button
                   className={activePanel === 'summary' ? 'tool-button is-active' : 'tool-button'}
                   type="button"
-                  onClick={() => setActivePanel('summary')}
+                  disabled={summaryStatus === 'running'}
+                  aria-label={copy.summary}
+                  {...tooltipProps(copy.summaryTooltip)}
+                  onClick={() =>
+                    hasCanonicalMarkdown ? void handleGenerateSummary(Boolean(summaryResult)) : setActivePanel('summary')
+                  }
                 >
                   <Sparkles size={17} aria-hidden="true" />
-                  Summary
+                  {summaryStatus === 'running' ? copy.summarizing : copy.summary}
                 </button>
                 <button
                   className={activePanel === 'translation' ? 'tool-button is-active' : 'tool-button'}
                   type="button"
-                  onClick={() => setActivePanel('translation')}
+                  disabled={translationStatus === 'running'}
+                  aria-label={copy.translate}
+                  {...tooltipProps(copy.translateTooltip)}
+                  onClick={() =>
+                    hasCanonicalMarkdown
+                      ? void handleTranslateArticle(Boolean(translationResult))
+                      : setActivePanel('translation')
+                  }
                 >
                   <Languages size={17} aria-hidden="true" />
-                  Translate
+                  {translationStatus === 'running' ? copy.translating : copy.translate}
                 </button>
                 <button
                   className={activePanel === 'usage' ? 'tool-button is-active' : 'tool-button'}
                   type="button"
-                  onClick={() => setActivePanel('usage')}
+                  aria-label={copy.usage}
+                  {...tooltipProps(copy.usageTooltip)}
+                  onClick={() => {
+                    setIsInspectorCollapsed(false);
+                    setActivePanel('usage');
+                  }}
                 >
                   <BarChart3 size={17} aria-hidden="true" />
-                  Usage
-                </button>
-                <button
-                  className={activePanel === 'settings' ? 'tool-button is-active' : 'tool-button'}
-                  type="button"
-                  onClick={() => setActivePanel('settings')}
-                >
-                  <Settings size={17} aria-hidden="true" />
-                  Settings
+                  {copy.usage}
                 </button>
                 <button
                   className="tool-button"
                   type="button"
-                  disabled={!selectedContent?.canonicalMarkdown}
-                  onClick={() => downloadMarkdown(selectedArticle, selectedContent)}
+                  disabled={!hasCanonicalMarkdown}
+                  aria-label={copy.export}
+                  {...tooltipProps(copy.exportMarkdown)}
+                  onClick={() => void handleExportCurrentArticle()}
                 >
                   <Download size={17} aria-hidden="true" />
-                  Export
+                  {copy.export}
                 </button>
               </div>
+              {exportMessage ? <div className="reader-action-message">{exportMessage}</div> : null}
             </header>
 
             <div className="reader-grid">
               {contentStatus === 'loading' ? (
                 <div className="reader-loading">
                   <Clock size={20} aria-hidden="true" />
-                  Loading article content...
+                  {copy.loadingContent}
                 </div>
               ) : null}
               {contentStatus === 'error' ? (
@@ -684,7 +1242,7 @@ export function ReaderApp() {
               {contentStatus === 'empty' ? (
                 <div className="reader-loading">
                   <FileText size={20} aria-hidden="true" />
-                  This article has no saved content yet
+                  {copy.noArticleContent}
                 </div>
               ) : null}
               {contentStatus === 'ready' && selectedContent ? (
@@ -693,62 +1251,71 @@ export function ReaderApp() {
                 </article>
               ) : null}
 
-              <aside className="inspector-panel">
-                {activePanel === 'usage' ? (
+              <aside className={`inspector-panel ${isInspectorCollapsed ? 'is-collapsed' : ''}`}>
+                <button
+                  className="inspector-toggle-bar"
+                  type="button"
+                  title={isInspectorCollapsed ? copy.showAi : copy.collapseAi}
+                  aria-label={isInspectorCollapsed ? copy.showAi : copy.collapseAi}
+                  onClick={() => setIsInspectorCollapsed((current) => !current)}
+                >
+                  {isInspectorCollapsed ? <ChevronDown size={17} aria-hidden="true" /> : <ChevronUp size={17} aria-hidden="true" />}
+                  {isInspectorCollapsed ? copy.showAi : copy.collapseAi}
+                </button>
+
+                {!isInspectorCollapsed && activePanel === 'usage' ? (
                   <div className="inspector-section">
                     <div className="inspector-title">
                       <Database size={17} aria-hidden="true" />
-                      <span>Usage</span>
+                      <span>{copy.usage}</span>
                     </div>
-                    <div className="usage-total">0 tokens</div>
+                    <div className="usage-total">{formatTokenCount(usageSummary.totalTokens)} {copy.tokens}</div>
+                    <div className="usage-metrics">
+                      <span>
+                        <strong>{usageSummary.totalCalls}</strong>
+                        {copy.calls}
+                      </span>
+                      <span>
+                        <strong>{usageSummary.succeededCalls}</strong>
+                        {copy.succeeded}
+                      </span>
+                      <span>
+                        <strong>{usageSummary.failedCalls}</strong>
+                        {copy.failed}
+                      </span>
+                    </div>
+                    <div className="usage-breakdown">
+                      {usageSummary.byPurpose.length === 0 ? (
+                        <span>{copy.noUsage}</span>
+                      ) : (
+                        usageSummary.byPurpose.map((row) => (
+                          <span key={row.purpose}>
+                            {row.purpose}: {row.calls} {copy.calls}, {formatTokenCount(row.totalTokens)} {copy.tokens}
+                          </span>
+                        ))
+                      )}
+                    </div>
                     <div className="usage-list">
-                      <div className="usage-row">
-                        <span>Summary / Translation usage will appear after AI calls run.</span>
-                      </div>
+                      {usageStatus === 'loading' ? <span className="state-line">{copy.loadingUsage}</span> : null}
+                      {usageStatus === 'error' ? (
+                        <span className="state-line state-line-error">Usage failed to load</span>
+                      ) : null}
+                      {usageSummary.recent.map((event) => (
+                        <div className="usage-row" key={event.id}>
+                          <span>{event.purpose}</span>
+                          <strong>{formatTokenCount(event.totalTokens ?? 0)}</strong>
+                          <span className={`usage-status usage-status-${event.status}`}>{event.status}</span>
+                        </div>
+                      ))}
                     </div>
+                    <button className="tool-button is-full" type="button" title={copy.refresh} onClick={() => void refreshUsageEvents()}>
+                      <RefreshCw size={16} aria-hidden="true" />
+                      {copy.refresh}
+                    </button>
                   </div>
                 ) : null}
 
-                {activePanel === 'settings' ? (
-                  <div className="inspector-section">
-                    <div className="inspector-title">
-                      <Settings size={17} aria-hidden="true" />
-                      <span>Reading Settings</span>
-                    </div>
-                    <div className="setting-group">
-                      <span className="setting-label">Font size</span>
-                      <div className="segmented-control" role="group" aria-label="Font size">
-                        {(['small', 'medium', 'large'] as const).map((value) => (
-                          <button
-                            className={fontSize === value ? 'is-selected' : ''}
-                            key={value}
-                            type="button"
-                            onClick={() => setFontSize(value)}
-                          >
-                            {value}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="setting-group">
-                      <span className="setting-label">Line height</span>
-                      <div className="segmented-control" role="group" aria-label="Line height">
-                        {(['compact', 'comfortable', 'loose'] as const).map((value) => (
-                          <button
-                            className={lineHeight === value ? 'is-selected' : ''}
-                            key={value}
-                            type="button"
-                            onClick={() => setLineHeight(value)}
-                          >
-                            {value}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-
-                {activePanel === 'summary' || activePanel === 'translation' ? (
+                {!isInspectorCollapsed && (activePanel === 'summary' || activePanel === 'translation') ? (
                   <div className="inspector-section">
                     <div className="inspector-title">
                       {activePanel === 'summary' ? (
@@ -756,53 +1323,262 @@ export function ReaderApp() {
                       ) : (
                         <Languages size={17} aria-hidden="true" />
                       )}
-                      <span>{activePanel === 'summary' ? 'Summary' : 'Translation'}</span>
+                      <span>{activePanel === 'summary' ? copy.summary : copy.translate}</span>
                     </div>
+                    {activePanel === 'summary' ? (
+                      <div className="agent-controls">
+                        <label className="setting-group">
+                          <span className="setting-label">{copy.targetLanguage}</span>
+                          <select value={summaryTargetLanguage} onChange={(event) => setSummaryTargetLanguage(event.target.value)}>
+                            <option value="zh-CN">{copy.chinese}</option>
+                            <option value="en-US">{copy.english}</option>
+                            <option value="ja-JP">{copy.japanese}</option>
+                          </select>
+                        </label>
+                        <div className="setting-group">
+                          <span className="setting-label">{copy.detail}</span>
+                          <div className="segmented-control" role="group" aria-label={copy.detail}>
+                            {(['brief', 'standard'] as const).map((value) => (
+                              <button
+                                className={summaryDetailLevel === value ? 'is-selected' : ''}
+                                key={value}
+                                type="button"
+                                title={copy[value]}
+                                onClick={() => setSummaryDetailLevel(value)}
+                              >
+                                {copy[value]}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <button
+                          className="primary-button is-compact"
+                          type="button"
+                          disabled={!hasCanonicalMarkdown || summaryStatus === 'running'}
+                          title={summaryResult ? copy.regenerate : copy.generate}
+                          onClick={() => void handleGenerateSummary(Boolean(summaryResult))}
+                        >
+                          <Sparkles size={16} aria-hidden="true" />
+                          {summaryStatus === 'running' ? copy.generating : summaryResult ? copy.regenerate : copy.generate}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="agent-controls">
+                        <label className="setting-group">
+                          <span className="setting-label">{copy.targetLanguage}</span>
+                          <select
+                            value={translationTargetLanguage}
+                            onChange={(event) => setTranslationTargetLanguage(event.target.value)}
+                          >
+                            <option value="zh-CN">{copy.chinese}</option>
+                            <option value="en-US">{copy.english}</option>
+                            <option value="ja-JP">{copy.japanese}</option>
+                          </select>
+                        </label>
+                        <label className="setting-group">
+                          <span className="setting-label">{copy.sourceLanguage}</span>
+                          <select value={sourceLanguage} onChange={(event) => setSourceLanguage(event.target.value)}>
+                            <option value="auto">{copy.auto}</option>
+                            <option value="en-US">{copy.english}</option>
+                            <option value="zh-CN">{copy.chinese}</option>
+                            <option value="ja-JP">{copy.japanese}</option>
+                          </select>
+                        </label>
+                        <button
+                          className="primary-button is-compact"
+                          type="button"
+                          disabled={!hasCanonicalMarkdown || translationStatus === 'running'}
+                          title={translationResult ? copy.retranslate : copy.translate}
+                          onClick={() => void handleTranslateArticle(Boolean(translationResult))}
+                        >
+                          <Languages size={16} aria-hidden="true" />
+                          {translationStatus === 'running' ? copy.translating : translationResult ? copy.retranslate : copy.translate}
+                        </button>
+                      </div>
+                    )}
                     <div className="agent-status-list">
                       <div className="agent-status-row">
                         <span>{activePanel}</span>
-                        <StatusPill status="idle" />
+                        <StatusPill status={activePanel === 'summary' ? summaryStatus : translationStatus} />
                       </div>
                     </div>
-                    <p className="agent-output">
-                      {selectedContent?.canonicalMarkdown
-                        ? 'This article is ready for AI processing. Summary and Translation will use its canonicalMarkdown input.'
-                        : 'Sync and select an article with canonicalMarkdown before running AI processing.'}
-                    </p>
+                    {activePanel === 'summary' && summaryError ? <p className="agent-error">{summaryError}</p> : null}
+                    {activePanel === 'translation' && translationError ? (
+                      <p className="agent-error">{translationError}</p>
+                    ) : null}
+                    <pre className="agent-output">
+                      {activePanel === 'summary'
+                        ? summaryResult?.markdown ??
+                          (hasCanonicalMarkdown
+                            ? copy.summaryHint
+                            : 'Sync and select an article with canonicalMarkdown before running AI processing.')
+                        : translationResult?.markdown ??
+                          (hasCanonicalMarkdown
+                            ? copy.translationHint
+                            : 'Sync and select an article with canonicalMarkdown before running AI processing.')}
+                    </pre>
                     <div className="inspector-actions">
-                      <button className="icon-button" type="button" aria-label="Regenerate" title="Regenerate">
+                      <button
+                        className="icon-button"
+                        type="button"
+                        aria-label={copy.regenerate}
+                        title={copy.regenerate}
+                        disabled={!hasCanonicalMarkdown}
+                        onClick={() =>
+                          activePanel === 'summary'
+                            ? void handleGenerateSummary(true)
+                            : void handleTranslateArticle(true)
+                        }
+                      >
                         <RotateCcw size={16} aria-hidden="true" />
                       </button>
-                      <button className="icon-button" type="button" aria-label="Copy" title="Copy">
+                      <button
+                        className="icon-button"
+                        type="button"
+                        aria-label={copy.copy}
+                        title={copy.copy}
+                        disabled={activePanel === 'summary' ? !summaryResult : !translationResult}
+                        onClick={() =>
+                          void handleCopyAgentOutput(
+                            activePanel === 'summary' ? summaryResult?.markdown : translationResult?.markdown
+                          )
+                        }
+                      >
                         <Copy size={16} aria-hidden="true" />
                       </button>
-                      <button className="icon-button" type="button" aria-label="Clear" title="Clear">
+                      <button
+                        className="icon-button"
+                        type="button"
+                        aria-label={copy.clear}
+                        title={copy.clear}
+                        onClick={() => {
+                          if (activePanel === 'summary') {
+                            setSummaryStatus('idle');
+                            setSummaryResult(null);
+                            setSummaryError('');
+                          } else {
+                            setTranslationStatus('idle');
+                            setTranslationResult(null);
+                            setTranslationError('');
+                          }
+                        }}
+                      >
                         <Trash2 size={16} aria-hidden="true" />
                       </button>
                     </div>
                     <div className="provider-line">
                       <Wifi size={16} aria-hidden="true" />
-                      <span>Provider not configured</span>
+                      <span>
+                        {activePanel === 'summary' && summaryResult
+                          ? `${summaryResult.providerName} / ${summaryResult.model}`
+                          : activePanel === 'translation' && translationResult
+                            ? `${translationResult.providerName} / ${translationResult.model}`
+                            : copy.mockProvider}
+                      </span>
                     </div>
                   </div>
                 ) : null}
               </aside>
             </div>
 
-            <footer className="contract-strip">
-              <span>
-                <FileText size={16} aria-hidden="true" />
-                canonicalMarkdown
-              </span>
-              <span>Local storage</span>
-              <span>AI provider</span>
-              <span>Usage records</span>
-            </footer>
           </>
         ) : (
-          <EmptyState message="No article selected" />
+          <EmptyState
+            title={copy.noArticle}
+            message={copy.noArticleBody}
+            steps={copy.welcomeSteps}
+            actions={
+              <>
+                <button className="primary-button" type="button" onClick={handleRunWeek2Sync} disabled={syncStatus === 'running'}>
+                  {syncStatus === 'running' ? <RefreshCw className="spin-icon" size={17} aria-hidden="true" /> : <Plus size={17} aria-hidden="true" />}
+                  {syncStatus === 'running' ? copy.syncing : copy.syncFeeds}
+                </button>
+                <button
+                  className="tool-button"
+                  type="button"
+                  onClick={() => setActiveDialog('help')}
+                >
+                  <HelpCircle size={17} aria-hidden="true" />
+                  {copy.help}
+                </button>
+              </>
+            }
+          />
         )}
       </section>
+      {activeDialog === 'help' ? (
+        <DialogShell
+          title={copy.helpTitle}
+          closeLabel={copy.closeDialog}
+          icon={<HelpCircle size={20} aria-hidden="true" />}
+          onClose={() => setActiveDialog(null)}
+        >
+          <div className="help-panel">
+            {copy.helpBody.map((item) => (
+              <p key={item}>{item}</p>
+            ))}
+          </div>
+        </DialogShell>
+      ) : null}
+      {activeDialog === 'settings' ? (
+        <DialogShell
+          title={copy.readingSettings}
+          closeLabel={copy.closeDialog}
+          icon={<Settings size={20} aria-hidden="true" />}
+          onClose={() => setActiveDialog(null)}
+        >
+          <label className="setting-group">
+            <span className="setting-label">{copy.interfaceLanguage}</span>
+            <select value={uiLanguage} onChange={(event) => setUiLanguage(event.target.value as UiLanguage)}>
+              <option value="zh">{copy.chinese}</option>
+              <option value="en">{copy.english}</option>
+            </select>
+          </label>
+          <div className="setting-group">
+            <span className="setting-label">{copy.fontSize}</span>
+            <div className="segmented-control" role="group" aria-label={copy.fontSize}>
+              {(['small', 'medium', 'large'] as const).map((value) => (
+                <button
+                  className={fontSize === value ? 'is-selected' : ''}
+                  key={value}
+                  type="button"
+                  title={copy[value]}
+                  onClick={() => setFontSize(value)}
+                >
+                  {copy[value]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="setting-group">
+            <span className="setting-label">{copy.lineHeight}</span>
+            <div className="segmented-control" role="group" aria-label={copy.lineHeight}>
+              {(['compact', 'comfortable', 'loose'] as const).map((value) => (
+                <button
+                  className={lineHeight === value ? 'is-selected' : ''}
+                  key={value}
+                  type="button"
+                  title={copy[value]}
+                  onClick={() => setLineHeight(value)}
+                >
+                  {copy[value]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </DialogShell>
+      ) : null}
+      {tooltip ? (
+        <div
+          className="app-tooltip"
+          style={{
+            left: tooltip.x,
+            top: tooltip.y
+          }}
+        >
+          {tooltip.text}
+        </div>
+      ) : null}
     </main>
   );
 }

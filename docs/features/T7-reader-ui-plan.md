@@ -202,3 +202,36 @@ T7 MVP 完成时应满足：
 - 至少两个阅读设置可以工作。
 - Summary、Translation、Export 入口位置明确。
 - 持续维护交互审查清单，并在每周集成时反馈给 T0。
+
+## 8. Week 3 UI 联调更新
+
+本轮 T7 已在 `src/features/reader/ReaderApp.tsx` 和
+`src/styles/global.css` 中完成 Week 3 Reader UI 联调与可用性整改：
+
+- 接入 Summary、Translation、Usage、Markdown Export 的前端入口，并通过
+  `src/features/reader/week3AgentUiPort.ts` 使用 mock provider fallback 打通
+  Week 3 UI 调用链路。
+- Summary / Translation 结果区支持运行状态、错误提示、重新生成、复制和清空。
+- Usage 面板支持展示调用次数、成功 / 失败数、token 汇总和最近调用记录。
+- Markdown Export 会导出当前文章正文，并包含已有摘要和翻译结果。
+- 阅读设置和使用说明从 AI 面板中移出，改为应用级弹窗，避免用户在 AI 面板里寻找基础设置。
+- 订阅栏和文章列表栏支持独立收起 / 展开；收起后保留窄条和书签式展开按钮。
+- AI 面板固定在阅读器正文上方，宽度跟随阅读器内容区，高度可由用户纵向拖动调整。
+- 阅读正文、图片、表格、代码块和链接增加溢出保护，避免横向滚动和文字遮盖。
+- 顶部工具栏精简为文章级操作：原文、已读 / 未读、收藏、摘要、翻译、用量、导出。
+- 鼠标悬浮和键盘聚焦时展示明确 tooltip；tooltip 已限制宽度并自动换行，避免英文长句溢出。
+- 界面支持中文 / 英文切换，覆盖按钮、说明文案、设置项和主要状态提示。
+
+本轮验证命令：
+
+```bash
+npm run typecheck
+npm run build
+npm test
+```
+
+当前说明：
+
+- AI 输出仍使用 mock fallback，用于联调 UI、usage 记录和导出流程。
+- Electron 中如遇 `better-sqlite3` ABI 不匹配，会降级到 JSON fallback storage；
+  该提示不影响本轮 Reader UI 交互验证。
