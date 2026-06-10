@@ -1,4 +1,4 @@
-export type OpmlSubscriptionSource = 'manual' | 'opml' | 'mock';
+export type OpmlSubscriptionSource = 'manual' | 'opml';
 export type OpmlSubscriptionStatus = 'active' | 'disabled' | 'error';
 
 export type OpmlParsedSubscription = {
