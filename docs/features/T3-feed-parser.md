@@ -108,7 +108,7 @@ npm run smoke:feed
 Default real Feed list:
 
 - `https://www.ruanyifeng.com/blog/atom.xml`
-- `https://hnrss.org/frontpage`
+- `https://css-tricks.com/feed/`
 - `https://xkcd.com/atom.xml`
 
 Custom Feed URLs can be passed after `--`:

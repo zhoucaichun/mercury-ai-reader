@@ -7,7 +7,7 @@ import {
 
 const defaultFeeds = [
   "https://www.ruanyifeng.com/blog/atom.xml",
-  "https://hnrss.org/frontpage",
+  "https://css-tricks.com/feed/",
   "https://xkcd.com/atom.xml",
 ];
 

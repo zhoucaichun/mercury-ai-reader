@@ -47,7 +47,7 @@ T6 Reader Pipeline 后续可以优先读取以下字段：
 | Feed | 类型 | 语言 | 验证结果 |
 | --- | --- | --- | --- |
 | `https://www.ruanyifeng.com/blog/atom.xml` | Atom | 中文 | 通过 |
-| `https://hnrss.org/frontpage` | RSS | 英文 | 通过 |
+| `https://css-tricks.com/feed/` | RSS | 英文 | 通过 |
 | `https://xkcd.com/atom.xml` | Atom | 英文 | 通过，summary 使用 fallback |
 
 每个默认 Feed 都至少找到一篇文章具备：
