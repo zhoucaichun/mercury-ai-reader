@@ -360,7 +360,8 @@ export class MockStoragePort implements Week2StoragePort {
   private feeds: Map<string, Week2Feed> = new Map();
   private articles: Map<string, Week2Article> = new Map();
   private contents: Map<string, Week2ArticleContent> = new Map();
-  private existingArticleUrls: Map<string, Set<string>> = new Map(); // feedId -> Set<url>
+  /** 全局去重 key 集合：跨 feedId 去重，同一文章 (guid/url) 只入库一次 */
+  private globalDedupKeys: Set<string> = new Set();
 
   async saveFeeds(feeds: Week2Feed[]): Promise<Week2Feed[]> {
     for (const feed of feeds) {
@@ -379,29 +380,13 @@ export class MockStoragePort implements Week2StoragePort {
   }): Promise<Week2Article[]> {
     const { feedId, articles } = input;
 
-    // 初始化该 feed 的 URL 集合（用于去重）
-    if (!this.existingArticleUrls.has(feedId)) {
-      this.existingArticleUrls.set(feedId, new Set());
-    }
-    const existingUrls = this.existingArticleUrls.get(feedId)!;
-
-    // 同时用 guid 去重
-    const existingGuids = new Set(
-      Array.from(this.articles.values())
-        .filter((a) => a.feedId === feedId)
-        .map((a) => {
-          // 找对应的 content 来获取 guid 信息
-          return a.url;
-        })
-    );
-
     const saved: Week2Article[] = [];
 
     for (const parsed of articles) {
-      // 去重：优先用 guid，其次 url
+      // 全局去重：优先用 guid，其次 url
       const dedupKey = parsed.guid ?? parsed.url;
-      if (existingUrls.has(dedupKey)) {
-        continue; // 跳过重复文章
+      if (this.globalDedupKeys.has(dedupKey)) {
+        continue; // 跳过重复文章（跨 feedId 去重）
       }
 
       const articleId = generateId();
@@ -438,8 +423,8 @@ export class MockStoragePort implements Week2StoragePort {
       };
       this.contents.set(articleId, content);
 
-      // 记录去重 key
-      existingUrls.add(dedupKey);
+      // 记录全局去重 key
+      this.globalDedupKeys.add(dedupKey);
 
       saved.push(article);
     }
