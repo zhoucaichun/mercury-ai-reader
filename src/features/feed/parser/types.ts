@@ -17,7 +17,8 @@ export type FeedWarningCode =
   | "ARTICLE_DUPLICATE"
   | "ARTICLE_MISSING_TITLE"
   | "ARTICLE_MISSING_LINK"
-  | "ARTICLE_INVALID_DATE";
+  | "ARTICLE_INVALID_DATE"
+  | "ARTICLE_CONTENT_FALLBACK";
 
 export interface FeedWarning {
   code: FeedWarningCode;
