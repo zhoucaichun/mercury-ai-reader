@@ -1081,6 +1081,72 @@ select:focus-visible {
   background: #e4ece8;
 }
 
+.agent-progress-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  color: #2f4843;
+  background: #eef6f1;
+  border: 1px solid #cfe3db;
+  border-radius: 7px;
+}
+
+.agent-progress-heading,
+.agent-progress-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.agent-progress-heading {
+  color: #254f47;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.agent-progress-meta {
+  flex-wrap: wrap;
+  color: #58706b;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.agent-progress-card p {
+  margin: 0;
+  color: #68736f;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.agent-progress-article {
+  overflow: hidden;
+  color: #2f4843;
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-progress-generating,
+.agent-progress-requesting,
+.agent-progress-preparing {
+  background: #fff8e7;
+  border-color: #ead9aa;
+}
+
+.agent-progress-failed {
+  color: #873638;
+  background: #f4dedb;
+  border-color: #ebb8b0;
+}
+
+.agent-progress-succeeded {
+  background: #e5f3ed;
+  border-color: #beded1;
+}
+
 .agent-status-running,
 .agent-status-queued {
   color: #6c4f10;

@@ -56,6 +56,14 @@ type LineHeightSetting = 'compact' | 'comfortable' | 'loose';
 type SyncStatus = 'idle' | 'running' | 'succeeded' | 'failed';
 type UsageStatus = 'idle' | 'loading' | 'ready' | 'error';
 type ProviderStatus = 'idle' | 'saving' | 'testing' | 'succeeded' | 'failed';
+type AgentProgressPhase = 'preparing' | 'requesting' | 'generating' | 'saving' | 'succeeded' | 'failed';
+
+interface AgentProgressState {
+  phase: AgentProgressPhase;
+  startedAt: number;
+  articleTitle: string;
+  estimatedInputTokens: number;
+}
 
 const uiCopy = {
   zh: {
@@ -355,6 +363,31 @@ const agentStatusLabels: Record<AgentRunStatus, string> = {
   cancelled: 'cancelled'
 };
 
+const agentProgressCopy = {
+  zh: {
+    elapsed: '已等待',
+    estimatedInput: '输入约',
+    nonStreamingHint: '当前模型为完整返回模式，结果会在生成完成后一次性显示。',
+    preparing: '正在准备文章内容和 Prompt',
+    requesting: '正在连接模型服务',
+    generating: '模型正在生成，请稍等',
+    saving: '正在保存结果和用量记录',
+    succeeded: '生成完成',
+    failed: '生成失败'
+  },
+  en: {
+    elapsed: 'Elapsed',
+    estimatedInput: 'Input about',
+    nonStreamingHint: 'This provider returns the final answer at once, so content appears after generation finishes.',
+    preparing: 'Preparing article content and prompt',
+    requesting: 'Requesting the model provider',
+    generating: 'The model is generating',
+    saving: 'Saving result and usage record',
+    succeeded: 'Completed',
+    failed: 'Failed'
+  }
+} as const;
+
 const emptyReaderDataPort: Week2ReaderDataPort = {
   async listFeeds() {
     return [];
@@ -531,6 +564,44 @@ function ArticleRow({
 
 function StatusPill({ status }: { status: AgentRunStatus }) {
   return <span className={`agent-status agent-status-${status}`}>{agentStatusLabels[status]}</span>;
+}
+
+function AgentProgressCard({
+  copy,
+  elapsedMs,
+  progress
+}: {
+  copy: (typeof agentProgressCopy)[UiLanguage];
+  elapsedMs: number;
+  progress: AgentProgressState;
+}) {
+  const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+  const phaseText = copy[progress.phase];
+
+  return (
+    <div className={`agent-progress-card agent-progress-${progress.phase}`}>
+      <div className="agent-progress-heading">
+        {progress.phase === 'succeeded' ? (
+          <CheckCircle2 size={16} aria-hidden="true" />
+        ) : progress.phase === 'failed' ? (
+          <CircleAlert size={16} aria-hidden="true" />
+        ) : (
+          <RefreshCw className="spin-icon" size={16} aria-hidden="true" />
+        )}
+        <span>{phaseText}</span>
+      </div>
+      <div className="agent-progress-meta">
+        <span>
+          {copy.elapsed} {elapsedSeconds}s
+        </span>
+        <span>
+          {copy.estimatedInput} {formatTokenCount(progress.estimatedInputTokens)} tokens
+        </span>
+      </div>
+      <strong className="agent-progress-article">{progress.articleTitle}</strong>
+      <p>{copy.nonStreamingHint}</p>
+    </div>
+  );
 }
 
 function EmptyState({
@@ -791,11 +862,13 @@ export function ReaderApp() {
   const [summaryStatus, setSummaryStatus] = useState<AgentRunStatus>('idle');
   const [summaryResult, setSummaryResult] = useState<Week3SummaryResult | null>(null);
   const [summaryError, setSummaryError] = useState('');
+  const [summaryProgress, setSummaryProgress] = useState<AgentProgressState | null>(null);
   const [translationTargetLanguage, setTranslationTargetLanguage] = useState('zh-CN');
   const [sourceLanguage, setSourceLanguage] = useState('auto');
   const [translationStatus, setTranslationStatus] = useState<AgentRunStatus>('idle');
   const [translationResult, setTranslationResult] = useState<Week3TranslationResult | null>(null);
   const [translationError, setTranslationError] = useState('');
+  const [translationProgress, setTranslationProgress] = useState<AgentProgressState | null>(null);
   const [usageEvents, setUsageEvents] = useState<LLMUsageEvent[]>([]);
   const [usageStatus, setUsageStatus] = useState<UsageStatus>('idle');
   const [providerBaseUrl, setProviderBaseUrl] = useState('');
@@ -810,6 +883,7 @@ export function ReaderApp() {
   const [articlesWidth, setArticlesWidth] = useState(360);
   const [aiWidth, setAiWidth] = useState(340);
   const resizeRef = useRef<{ panel: 'feeds' | 'articles' | 'ai'; startX: number; startWidth: number } | null>(null);
+  const [agentProgressNow, setAgentProgressNow] = useState(Date.now());
 
   useEffect(() => {
     const config = loadReaderLLMProviderConfig();
@@ -819,6 +893,19 @@ export function ReaderApp() {
       setProviderModel(config.model);
     }
   }, []);
+
+  useEffect(() => {
+    if (summaryStatus !== 'running' && translationStatus !== 'running') {
+      return;
+    }
+
+    setAgentProgressNow(Date.now());
+    const timer = window.setInterval(() => {
+      setAgentProgressNow(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [summaryStatus, translationStatus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -899,9 +986,11 @@ export function ReaderApp() {
     setSummaryStatus('idle');
     setSummaryResult(null);
     setSummaryError('');
+    setSummaryProgress(null);
     setTranslationStatus('idle');
     setTranslationResult(null);
     setTranslationError('');
+    setTranslationProgress(null);
     setExportMessage('');
   }, [selectedArticleId]);
 
@@ -959,6 +1048,10 @@ export function ReaderApp() {
   const currentTranslationMarkdown =
     translationResult?.articleId === selectedArticleId ? translationResult.markdown : '';
   const copy = uiCopy[uiLanguage];
+  const currentAgentProgress = activePanel === 'summary' ? summaryProgress : translationProgress;
+  const currentAgentProgressElapsed = currentAgentProgress
+    ? agentProgressNow - currentAgentProgress.startedAt
+    : 0;
   const shellClassName = [
     'app-shell',
     isFeedsCollapsed ? 'is-feeds-collapsed' : '',
@@ -1064,6 +1157,31 @@ export function ReaderApp() {
     };
   }
 
+  function estimateInputTokens(markdown: string) {
+    return Math.max(1, Math.ceil(markdown.trim().length / 3));
+  }
+
+  function createAgentProgress(articleTitle: string, canonicalMarkdown: string): AgentProgressState {
+    return {
+      phase: 'preparing',
+      startedAt: Date.now(),
+      articleTitle,
+      estimatedInputTokens: estimateInputTokens(canonicalMarkdown)
+    };
+  }
+
+  function moveAgentProgressToGenerating(agentType: 'summary' | 'translation', startedAt: number) {
+    const setProgress = agentType === 'summary' ? setSummaryProgress : setTranslationProgress;
+    window.setTimeout(() => {
+      setProgress((current) => {
+        if (!current || current.startedAt !== startedAt || current.phase !== 'requesting') {
+          return current;
+        }
+        return { ...current, phase: 'generating' };
+      });
+    }, 900);
+  }
+
   async function handleGenerateSummary(regenerate = false) {
     openAiPanel('summary');
 
@@ -1073,21 +1191,49 @@ export function ReaderApp() {
 
     setSummaryStatus('running');
     setSummaryError('');
+    let articleInput: ReturnType<typeof createSelectedArticleInput>;
+    let progress: AgentProgressState;
 
     try {
+      articleInput = createSelectedArticleInput();
+      progress = createAgentProgress(articleInput.title, articleInput.canonicalMarkdown);
+    } catch (error) {
+      setSummaryStatus('failed');
+      setSummaryError(error instanceof Error ? error.message : 'Summary generation failed.');
+      setSummaryProgress(null);
+      return;
+    }
+
+    setSummaryProgress(progress);
+    setAgentProgressNow(Date.now());
+
+    try {
+      setSummaryProgress((current) =>
+        current?.startedAt === progress.startedAt ? { ...current, phase: 'requesting' } : current
+      );
+      moveAgentProgressToGenerating('summary', progress.startedAt);
       const result = await agentUiPort.generateSummary({
-        ...createSelectedArticleInput(),
+        ...articleInput,
         targetLanguage: summaryTargetLanguage,
         detailLevel: summaryDetailLevel,
         regenerate
       });
+      setSummaryProgress((current) =>
+        current?.startedAt === progress.startedAt ? { ...current, phase: 'saving' } : current
+      );
       setSummaryResult(result);
       setSummaryStatus('succeeded');
       await refreshUsageEvents();
+      setSummaryProgress((current) =>
+        current?.startedAt === progress.startedAt ? { ...current, phase: 'succeeded' } : current
+      );
     } catch (error) {
       setSummaryStatus('failed');
       setSummaryError(error instanceof Error ? error.message : 'Summary generation failed.');
       await refreshUsageEvents();
+      setSummaryProgress((current) =>
+        current?.startedAt === progress.startedAt ? { ...current, phase: 'failed' } : current
+      );
     }
   }
 
@@ -1100,21 +1246,49 @@ export function ReaderApp() {
 
     setTranslationStatus('running');
     setTranslationError('');
+    let articleInput: ReturnType<typeof createSelectedArticleInput>;
+    let progress: AgentProgressState;
 
     try {
+      articleInput = createSelectedArticleInput();
+      progress = createAgentProgress(articleInput.title, articleInput.canonicalMarkdown);
+    } catch (error) {
+      setTranslationStatus('failed');
+      setTranslationError(error instanceof Error ? error.message : 'Translation failed.');
+      setTranslationProgress(null);
+      return;
+    }
+
+    setTranslationProgress(progress);
+    setAgentProgressNow(Date.now());
+
+    try {
+      setTranslationProgress((current) =>
+        current?.startedAt === progress.startedAt ? { ...current, phase: 'requesting' } : current
+      );
+      moveAgentProgressToGenerating('translation', progress.startedAt);
       const result = await agentUiPort.translateArticle({
-        ...createSelectedArticleInput(),
+        ...articleInput,
         sourceLanguage: sourceLanguage === 'auto' ? undefined : sourceLanguage,
         targetLanguage: translationTargetLanguage,
         regenerate
       });
+      setTranslationProgress((current) =>
+        current?.startedAt === progress.startedAt ? { ...current, phase: 'saving' } : current
+      );
       setTranslationResult(result);
       setTranslationStatus('succeeded');
       await refreshUsageEvents();
+      setTranslationProgress((current) =>
+        current?.startedAt === progress.startedAt ? { ...current, phase: 'succeeded' } : current
+      );
     } catch (error) {
       setTranslationStatus('failed');
       setTranslationError(error instanceof Error ? error.message : 'Translation failed.');
       await refreshUsageEvents();
+      setTranslationProgress((current) =>
+        current?.startedAt === progress.startedAt ? { ...current, phase: 'failed' } : current
+      );
     }
   }
 
@@ -1667,6 +1841,13 @@ export function ReaderApp() {
                 <StatusPill status={activePanel === 'summary' ? summaryStatus : translationStatus} />
               </div>
             </div>
+            {currentAgentProgress ? (
+              <AgentProgressCard
+                copy={agentProgressCopy[uiLanguage]}
+                elapsedMs={currentAgentProgressElapsed}
+                progress={currentAgentProgress}
+              />
+            ) : null}
             {activePanel === 'summary' && summaryError ? <p className="agent-error">{summaryError}</p> : null}
             {activePanel === 'translation' && translationError ? (
               <p className="agent-error">{translationError}</p>
@@ -1694,7 +1875,10 @@ export function ReaderApp() {
                 type="button"
                 aria-label={copy.regenerate}
                 title={copy.regenerate}
-                disabled={!hasCanonicalMarkdown}
+                disabled={
+                  !hasCanonicalMarkdown ||
+                  (activePanel === 'summary' ? summaryStatus === 'running' : translationStatus === 'running')
+                }
                 onClick={() =>
                   activePanel === 'summary'
                     ? void handleGenerateSummary(true)
@@ -1728,10 +1912,12 @@ export function ReaderApp() {
                     setSummaryStatus('idle');
                     setSummaryResult(null);
                     setSummaryError('');
+                    setSummaryProgress(null);
                   } else {
                     setTranslationStatus('idle');
                     setTranslationResult(null);
                     setTranslationError('');
+                    setTranslationProgress(null);
                   }
                 }}
               >
