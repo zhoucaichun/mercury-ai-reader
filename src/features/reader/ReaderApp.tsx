@@ -39,10 +39,13 @@ import type {
 import { formatTokenCount, summarizeUsage } from '../usage/usage';
 import type { LLMUsageEvent } from '../usage/types';
 import {
+  activateReaderLLMProviderProfile,
   createBrowserWeek3AgentUiPort,
   loadReaderLLMProviderConfig,
+  loadReaderLLMProviderProfiles,
   saveReaderLLMProviderConfig,
   type Week3AgentUiPort,
+  type Week3LLMProviderConfig,
   type Week3SummaryDetailLevel,
   type Week3SummaryResult,
   type Week3TranslationResult
@@ -147,6 +150,9 @@ const uiCopy = {
     providerModel: 'Model',
     providerModelPlaceholder: '例如 gpt-4o-mini 或学校模型名称',
     providerSaved: '模型服务配置已保存。',
+    providerSwitched: '已切换模型配置。',
+    providerProfiles: '已保存模型配置',
+    providerProfilesEmpty: '保存模型配置后会显示在这里，方便快速切换。',
     providerSettings: '模型服务',
     providerSetupCta: '配置模型服务',
     providerSetupPrompt: '开始前建议先配置模型服务。配置后可以直接生成摘要、翻译，并记录用量。',
@@ -162,6 +168,8 @@ const uiCopy = {
     refreshUsage: '刷新模型调用统计',
     regenerate: '重新生成',
     retranslate: '重新翻译',
+    useProvider: '使用',
+    currentProvider: '当前',
     save: '收藏',
     saving: '保存中',
     saveTooltip: '点击收藏当前文章',
@@ -284,6 +292,9 @@ const uiCopy = {
     providerModel: 'Model',
     providerModelPlaceholder: 'For example, gpt-4o-mini or your school model',
     providerSaved: 'Model provider settings saved.',
+    providerSwitched: 'Model provider switched.',
+    providerProfiles: 'Saved model providers',
+    providerProfilesEmpty: 'Saved model providers will appear here for quick switching.',
     providerSettings: 'Model Provider',
     providerSetupCta: 'Configure model',
     providerSetupPrompt: 'Set up a model provider before reading so summary, translation, and usage records are ready.',
@@ -299,6 +310,8 @@ const uiCopy = {
     refreshUsage: 'Refresh model usage statistics.',
     regenerate: 'Regenerate',
     retranslate: 'Retranslate',
+    useProvider: 'Use',
+    currentProvider: 'Current',
     save: 'Save',
     saving: 'Saving',
     saveTooltip: 'Save this article.',
@@ -875,6 +888,7 @@ export function ReaderApp() {
   const [providerModel, setProviderModel] = useState('');
   const [providerApiKey, setProviderApiKey] = useState('');
   const [providerConfigured, setProviderConfigured] = useState(false);
+  const [providerProfiles, setProviderProfiles] = useState<Week3LLMProviderConfig[]>([]);
   const [providerStatus, setProviderStatus] = useState<ProviderStatus>('idle');
   const [providerMessage, setProviderMessage] = useState('');
   const [exportMessage, setExportMessage] = useState('');
@@ -892,6 +906,7 @@ export function ReaderApp() {
       setProviderBaseUrl(config.baseUrl);
       setProviderModel(config.model);
     }
+    setProviderProfiles(loadReaderLLMProviderProfiles());
   }, []);
 
   useEffect(() => {
@@ -1320,6 +1335,38 @@ export function ReaderApp() {
     setExportMessage(copy.copied);
   }
 
+  function handleOpenSummaryFromToolbar() {
+    openAiPanel('summary');
+    if (!hasCanonicalMarkdown || currentSummaryMarkdown || summaryStatus === 'running') {
+      return;
+    }
+    void handleGenerateSummary(false);
+  }
+
+  function handleOpenTranslationFromToolbar() {
+    openAiPanel('translation');
+    if (!hasCanonicalMarkdown || currentTranslationMarkdown || translationStatus === 'running') {
+      return;
+    }
+    void handleTranslateArticle(false);
+  }
+
+  function refreshProviderProfiles() {
+    setProviderProfiles(loadReaderLLMProviderProfiles());
+  }
+
+  function handleUseProviderProfile(profile: Week3LLMProviderConfig) {
+    const config = activateReaderLLMProviderProfile(profile);
+    setProviderBaseUrl(config.baseUrl);
+    setProviderModel(config.model);
+    setProviderApiKey('');
+    setProviderConfigured(true);
+    setAgentUiPort(createBrowserWeek3AgentUiPort());
+    refreshProviderProfiles();
+    setProviderStatus('succeeded');
+    setProviderMessage(`${copy.providerSwitched} ${config.model}`);
+  }
+
   function ensureProviderConfigured(agentType: 'summary' | 'translation') {
     if (loadReaderLLMProviderConfig()) {
       return true;
@@ -1356,6 +1403,7 @@ export function ReaderApp() {
       setProviderApiKey('');
       setProviderConfigured(true);
       setAgentUiPort(createBrowserWeek3AgentUiPort());
+      refreshProviderProfiles();
       setProviderStatus('succeeded');
       setProviderMessage(copy.providerSaved);
       await refreshUsageEvents();
@@ -1380,6 +1428,7 @@ export function ReaderApp() {
         setProviderModel(config.model);
         setProviderApiKey('');
         setProviderConfigured(true);
+        refreshProviderProfiles();
       }
 
       const port = createBrowserWeek3AgentUiPort();
@@ -1983,9 +2032,7 @@ export function ReaderApp() {
                   disabled={summaryStatus === 'running'}
                   aria-label={copy.summary}
                   {...tooltipProps(copy.summaryTooltip)}
-                  onClick={() =>
-                    hasCanonicalMarkdown ? void handleGenerateSummary(Boolean(currentSummaryMarkdown)) : openAiPanel('summary')
-                  }
+                  onClick={handleOpenSummaryFromToolbar}
                 >
                   <Sparkles size={17} aria-hidden="true" />
                   {summaryStatus === 'running' ? copy.summarizing : copy.summary}
@@ -1996,11 +2043,7 @@ export function ReaderApp() {
                   disabled={translationStatus === 'running'}
                   aria-label={copy.translate}
                   {...tooltipProps(copy.translateTooltip)}
-                  onClick={() =>
-                    hasCanonicalMarkdown
-                      ? void handleTranslateArticle(Boolean(currentTranslationMarkdown))
-                      : openAiPanel('translation')
-                  }
+                  onClick={handleOpenTranslationFromToolbar}
                 >
                   <Languages size={17} aria-hidden="true" />
                   {translationStatus === 'running' ? copy.translating : copy.translate}
@@ -2204,6 +2247,33 @@ export function ReaderApp() {
               />
             </label>
             <p className="settings-note">{copy.providerApiKeyHint}</p>
+            <div className="provider-profile-list" aria-label={copy.providerProfiles}>
+              <div className="provider-profile-title">{copy.providerProfiles}</div>
+              {providerProfiles.length === 0 ? (
+                <p className="settings-note">{copy.providerProfilesEmpty}</p>
+              ) : (
+                providerProfiles.map((profile) => {
+                  const isCurrent = profile.baseUrl === providerBaseUrl && profile.model === providerModel;
+
+                  return (
+                    <div className={isCurrent ? 'provider-profile-row is-current' : 'provider-profile-row'} key={`${profile.baseUrl}-${profile.model}`}>
+                      <div className="provider-profile-meta">
+                        <strong>{profile.model}</strong>
+                        <span>{profile.baseUrl}</span>
+                      </div>
+                      <button
+                        className={isCurrent ? 'agent-status agent-status-succeeded' : 'tool-button'}
+                        disabled={isCurrent || providerStatus === 'saving' || providerStatus === 'testing'}
+                        type="button"
+                        onClick={() => handleUseProviderProfile(profile)}
+                      >
+                        {isCurrent ? copy.currentProvider : copy.useProvider}
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
             <div className="settings-actions">
               <button
                 className="tool-button"

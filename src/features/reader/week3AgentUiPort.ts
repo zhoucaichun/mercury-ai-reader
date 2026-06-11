@@ -6,6 +6,7 @@ import type {
   Week3LLMProvider,
   Week3LLMProviderConfig
 } from '../agent/providers/types';
+export type { Week3LLMProviderConfig } from '../agent/providers/types';
 import type { Week3LLMUsageEvent, Week3LLMUsageSummary } from '../usage/types';
 import {
   BrowserLocalStorageLLMUsageEventStore,
@@ -18,6 +19,7 @@ import {
 export type Week3SummaryDetailLevel = 'brief' | 'standard';
 
 export const READER_LLM_PROVIDER_STORAGE_KEY = 'mercury.reader.llmProviderConfig';
+export const READER_LLM_PROVIDER_PROFILES_STORAGE_KEY = 'mercury.reader.llmProviderProfiles';
 
 export interface ReaderLLMProviderConfigInput {
   baseUrl: string;
@@ -324,7 +326,68 @@ export function saveReaderLLMProviderConfig(input: ReaderLLMProviderConfigInput)
   }
 
   globalThis.localStorage?.setItem(READER_LLM_PROVIDER_STORAGE_KEY, JSON.stringify(config));
+  saveReaderLLMProviderProfile(config);
   return config;
+}
+
+export function loadReaderLLMProviderProfiles(): Week3LLMProviderConfig[] {
+  if (typeof globalThis.localStorage === 'undefined') {
+    return [];
+  }
+
+  const raw = globalThis.localStorage.getItem(READER_LLM_PROVIDER_PROFILES_STORAGE_KEY);
+  if (!raw) {
+    const current = loadReaderLLMProviderConfig();
+    return current ? [current] : [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Array<Partial<Week3LLMProviderConfig>>;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .filter(
+        (profile): profile is Week3LLMProviderConfig =>
+          profile.kind === 'openai-compatible' &&
+          isNonEmptyString(profile.baseUrl) &&
+          isNonEmptyString(profile.model) &&
+          isNonEmptyString(profile.apiKey)
+      )
+      .map((profile) => ({
+        providerId: profile.providerId || 'school',
+        providerName: profile.providerName || 'School Model',
+        kind: 'openai-compatible',
+        baseUrl: profile.baseUrl.trim(),
+        model: profile.model.trim(),
+        apiKey: profile.apiKey?.trim() ?? '',
+        enabled: true,
+        timeoutMs: profile.timeoutMs ?? 30000
+      }));
+  } catch {
+    return [];
+  }
+}
+
+export function activateReaderLLMProviderProfile(profile: Week3LLMProviderConfig): Week3LLMProviderConfig {
+  globalThis.localStorage?.setItem(READER_LLM_PROVIDER_STORAGE_KEY, JSON.stringify(profile));
+  saveReaderLLMProviderProfile(profile);
+  return profile;
+}
+
+function saveReaderLLMProviderProfile(config: Week3LLMProviderConfig): void {
+  if (typeof globalThis.localStorage === 'undefined') {
+    return;
+  }
+
+  const profiles = loadReaderLLMProviderProfiles();
+  const nextProfiles = [
+    config,
+    ...profiles.filter((profile) => profile.baseUrl !== config.baseUrl || profile.model !== config.model)
+  ].slice(0, 8);
+
+  globalThis.localStorage.setItem(READER_LLM_PROVIDER_PROFILES_STORAGE_KEY, JSON.stringify(nextProfiles));
 }
 
 export function hasReaderLLMProviderConfig(): boolean {

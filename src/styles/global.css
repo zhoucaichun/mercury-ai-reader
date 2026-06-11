@@ -1434,6 +1434,62 @@ select:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.provider-profile-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 10px;
+  background: #f5f2ea;
+  border: 1px solid #ece8dd;
+  border-radius: 7px;
+}
+
+.provider-profile-title {
+  color: #2f4843;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.provider-profile-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px;
+  background: #fbfaf7;
+  border: 1px solid #ded9cc;
+  border-radius: 7px;
+}
+
+.provider-profile-row.is-current {
+  border-color: #b9d9ce;
+  background: #eaf5ef;
+}
+
+.provider-profile-meta {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.provider-profile-meta strong,
+.provider-profile-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-profile-meta strong {
+  color: #263634;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.provider-profile-meta span {
+  color: #68736f;
+  font-size: 12px;
+}
+
 .settings-actions {
   display: flex;
   flex-wrap: wrap;
