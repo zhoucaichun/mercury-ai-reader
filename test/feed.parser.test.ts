@@ -69,6 +69,8 @@ describe("feed parser", () => {
       feedId: parsed.feed.id,
     });
     expect(parsed.articles[0]?.summary).toContain("Short summary");
+    expect(parsed.articles[0]?.contentHtml).toContain("Full content body.");
+    expect(parsed.articles[0]?.contentText).toContain("Short summary");
     expect(parsed.articles[1]?.title).toContain("Item without a title");
     expect(parsed.articles[1]?.url).toBe("https://example.com/articles/missing-title");
     expect(parsed.articles[2]?.title).toBe("RSS item without link");
@@ -129,6 +131,42 @@ describe("feed parser", () => {
       url: "https://external.example.com/posts/two",
       updatedAt: "2024-05-23T09:00:00.000Z",
     });
+    expect(parsed.articles[0]?.contentHtml).toBe("<p>Full JSON content.</p>");
+    expect(parsed.articles[0]?.contentText).toBe("Full JSON content.");
+    expect(parsed.articles[1]?.contentText).toBe("JSON item without title.");
+    expect(parsed.articles[1]?.contentHtml).toBe("<p>JSON item without title.</p>");
+    expect(parsed.warnings.map((warning) => warning.code)).toContain(
+      "ARTICLE_CONTENT_FALLBACK",
+    );
+  });
+
+  it("fills contentHtml and contentText fallbacks for sparse real-world items", async () => {
+    const parsed = await parseFeedText(
+      JSON.stringify({
+        version: "https://jsonfeed.org/version/1.1",
+        title: "Sparse Feed",
+        items: [
+          {
+            id: "sparse-1",
+            url: "https://example.com/sparse-1",
+            title: "Sparse article",
+            date_published: "2026-06-10T08:00:00Z",
+          },
+        ],
+      }),
+      "https://example.com/feed.json",
+    );
+
+    expect(parsed.articles[0]).toMatchObject({
+      title: "Sparse article",
+      summary: "Sparse article",
+      contentHtml: "<p>Sparse article</p>",
+      contentText: "Sparse article",
+      publishedAt: "2026-06-10T08:00:00.000Z",
+    });
+    expect(parsed.warnings.map((warning) => warning.code)).toContain(
+      "ARTICLE_CONTENT_FALLBACK",
+    );
   });
 
   it("supports Feed URL adding through an injectable fetcher", async () => {

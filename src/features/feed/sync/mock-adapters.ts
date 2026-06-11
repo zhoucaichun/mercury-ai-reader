@@ -358,15 +358,36 @@ export class MockFeedParser implements Week2FeedParser {
 
 export class MockStoragePort implements Week2StoragePort {
   private feeds: Map<string, Week2Feed> = new Map();
+  private feedIdsByUrl: Map<string, string> = new Map();
   private articles: Map<string, Week2Article> = new Map();
   private contents: Map<string, Week2ArticleContent> = new Map();
   private existingArticleUrls: Map<string, Set<string>> = new Map(); // feedId -> Set<url>
 
   async saveFeeds(feeds: Week2Feed[]): Promise<Week2Feed[]> {
+    const saved: Week2Feed[] = [];
+
     for (const feed of feeds) {
+      const existingId = this.feedIdsByUrl.get(feed.feedUrl);
+
+      if (existingId) {
+        const existing = this.feeds.get(existingId);
+        const merged: Week2Feed = {
+          ...feed,
+          id: existingId,
+          unreadCount: existing?.unreadCount ?? feed.unreadCount,
+          lastSyncedAt: existing?.lastSyncedAt ?? feed.lastSyncedAt,
+        };
+        this.feeds.set(existingId, merged);
+        saved.push(merged);
+        continue;
+      }
+
       this.feeds.set(feed.id, feed);
+      this.feedIdsByUrl.set(feed.feedUrl, feed.id);
+      saved.push(feed);
     }
-    return feeds;
+
+    return saved;
   }
 
   async listFeeds(): Promise<Week2Feed[]> {

@@ -10,7 +10,8 @@ T3 owns Feed URL adding and RSS/Atom parsing. The module lives in `src/features/
 - Optionally parse JSON Feed 1.x when the response body is JSON.
 - Normalize Feed and article data into `StandardFeed` and `StandardArticle`.
 - Deduplicate repeated articles by GUID first, then URL.
-- Keep non-fatal issues as `FeedWarning` records, including missing titles, missing links, invalid dates, and duplicates.
+- Fill `summary`, `contentHtml`, and `contentText` fallbacks when real feeds omit body fields.
+- Keep non-fatal issues as `FeedWarning` records, including missing titles, missing links, invalid dates, duplicate articles, and content fallback.
 
 ## Public API
 
@@ -50,6 +51,13 @@ import {
 - `categories`
 
 This is intentionally storage-neutral. T2 can map these fields to SQLite rows, and T5 can use `id`, `guid`, and `url` for sync deduplication.
+
+For Week 3 regression, the parser attempts to keep `summary`, `contentHtml`, and `contentText` non-empty:
+
+- RSS / Atom: `content:encoded` / `content` / `description` are preferred for HTML, then generated from plain text.
+- JSON Feed: `content_html` is preferred for HTML, then generated from `content_text`, `summary`, or title.
+- `summary` falls back to normalized `contentText` when a real feed only provides HTML content.
+- A non-fatal `ARTICLE_CONTENT_FALLBACK` warning is recorded when fallback content is generated.
 
 ## Week 2 Contract
 
@@ -99,12 +107,14 @@ npm run smoke:feed
 
 Default real Feed list:
 
+- `https://www.ruanyifeng.com/blog/atom.xml`
 - `https://hnrss.org/frontpage`
 - `https://xkcd.com/atom.xml`
-- `https://www.theverge.com/rss/index.xml`
 
 Custom Feed URLs can be passed after `--`:
 
 ```bash
 npm run smoke:feed -- https://example.com/rss.xml
 ```
+
+The smoke script verifies each default feed has at least one article with non-empty `title`, `url`, `summary`, `contentHtml`, `contentText`, and `publishedAt`.

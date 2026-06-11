@@ -259,18 +259,27 @@ function normalizeXmlItem(
   warnings: FeedWarning[],
   siteUrl: string | undefined,
 ): StandardArticle {
-  const contentHtml = cleanText(item.contentEncoded ?? item.content ?? item.description);
-  const contentText =
+  const rawContentHtml = cleanText(item.contentEncoded ?? item.content ?? item.description);
+  const rawContentText =
     cleanText(item.contentSnippet) ??
     stripHtml(item.summary) ??
     stripHtml(item.description) ??
-    stripHtml(contentHtml);
-  const summary = trimToLength(
-    stripHtml(item.summary) ?? stripHtml(item.description) ?? contentText,
+    stripHtml(rawContentHtml);
+  const rawSummary = trimToLength(
+    stripHtml(item.summary) ?? stripHtml(item.description) ?? rawContentText,
     800,
   );
   const guid = cleanText(item.guid);
-  const title = buildArticleTitle(item.title, summary, index, warnings);
+  const title = buildArticleTitle(item.title, rawSummary, index, warnings);
+  const { contentHtml, contentText } = buildArticleContent({
+    rawHtml: rawContentHtml,
+    rawText: rawContentText,
+    summary: rawSummary,
+    title,
+    index,
+    warnings,
+  });
+  const summary = rawSummary ?? trimToLength(contentText, 800);
   const rawUrl = item.link ?? (looksLikeUrl(guid) ? guid : undefined);
   const url = buildArticleUrl(rawUrl, feed, index, title, guid, warnings, siteUrl);
   const publishedAt = toIsoDate(item.isoDate ?? item.pubDate, warnings, index);
@@ -301,11 +310,20 @@ function normalizeJsonItem(
   warnings: FeedWarning[],
   siteUrl: string | undefined,
 ): StandardArticle {
-  const contentHtml = cleanText(item.content_html);
-  const contentText = cleanText(item.content_text) ?? stripHtml(contentHtml);
-  const summary = trimToLength(cleanText(item.summary) ?? contentText, 800);
+  const rawContentHtml = cleanText(item.content_html);
+  const rawContentText = cleanText(item.content_text) ?? stripHtml(rawContentHtml);
+  const rawSummary = trimToLength(cleanText(item.summary) ?? rawContentText, 800);
   const guid = cleanText(item.id);
-  const title = buildArticleTitle(item.title, summary, index, warnings);
+  const title = buildArticleTitle(item.title, rawSummary, index, warnings);
+  const { contentHtml, contentText } = buildArticleContent({
+    rawHtml: rawContentHtml,
+    rawText: rawContentText,
+    summary: rawSummary,
+    title,
+    index,
+    warnings,
+  });
+  const summary = rawSummary ?? trimToLength(contentText, 800);
   const rawUrl = item.url ?? item.external_url ?? (looksLikeUrl(guid) ? guid : undefined);
   const url = buildArticleUrl(rawUrl, feed, index, title, guid, warnings, siteUrl);
   const publishedAt = toIsoDate(item.date_published, warnings, index);
@@ -348,6 +366,45 @@ function buildArticleTitle(
   });
 
   return trimToLength(summary, 80) ?? `Untitled article ${index + 1}`;
+}
+
+function buildArticleContent(input: {
+  rawHtml?: string;
+  rawText?: string;
+  summary?: string;
+  title: string;
+  index: number;
+  warnings: FeedWarning[];
+}): { contentHtml: string; contentText: string } {
+  const rawHtml = cleanText(input.rawHtml);
+  const contentText =
+    cleanText(input.rawText) ??
+    stripHtml(rawHtml) ??
+    cleanText(input.summary) ??
+    input.title;
+  const contentHtml = rawHtml ?? `<p>${escapeHtml(contentText)}</p>`;
+
+  if (!rawHtml || !cleanText(input.rawText)) {
+    input.warnings.push({
+      code: "ARTICLE_CONTENT_FALLBACK",
+      message: `Article ${input.index + 1} did not include complete content fields; fallback content was generated.`,
+      itemIndex: input.index,
+    });
+  }
+
+  return {
+    contentHtml,
+    contentText,
+  };
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function buildArticleUrl(

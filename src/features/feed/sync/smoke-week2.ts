@@ -7,18 +7,19 @@
  * 运行方式：npm run smoke:week2
  *
  * 测试流程：
- * 1. 创建 mock sync service（使用真实 Feed URL + 内存存储）
+ * 1. 创建 sync service（使用真实 Feed URL + T3 parser + 内存存储）
  * 2. 执行 syncAll()
  * 3. 读取存储结果
- * 4. 输出统计信息
+ * 4. 连续执行第二次 syncAll()，确认重复同步不会新增重复文章
+ * 5. 输出统计信息
  */
 
 import { createSyncService } from './sync.service.js';
 import {
   MockSubscriptionProvider,
-  MockFeedParser,
   MockStoragePort,
 } from './mock-adapters.js';
+import { week2FeedParser } from '../parser/index.js';
 
 async function main() {
   console.log('='.repeat(60));
@@ -26,14 +27,13 @@ async function main() {
   console.log('='.repeat(60));
   console.log();
 
-  // 创建 mock adapters
+  // 创建 adapters：订阅源和存储使用回归用内存实现，Feed 解析走 T3 真实 parser
   const storage = new MockStoragePort();
   const subscriptionProvider = new MockSubscriptionProvider();
-  const feedParser = new MockFeedParser();
 
   const syncService = createSyncService({
     subscriptionProvider,
-    feedParser,
+    feedParser: week2FeedParser,
     storage,
   });
 
@@ -42,6 +42,8 @@ async function main() {
   console.log();
 
   const result = await syncService.syncAll();
+  const articlesAfterFirstSync = await storage.listArticles();
+  const feedsAfterFirstSync = await storage.listFeeds();
 
   // 输出同步结果
   console.log('─'.repeat(60));
@@ -129,10 +131,35 @@ async function main() {
   }
 
   console.log();
+  console.log('─'.repeat(60));
+  console.log('🔁 Duplicate Sync Verification:');
+  console.log('─'.repeat(60));
+  const secondResult = await syncService.syncAll();
+  const articlesAfterSecondSync = await storage.listArticles();
+  const feedsAfterSecondSync = await storage.listFeeds();
+  const duplicateSyncPassed =
+    secondResult.status !== 'failed' &&
+    secondResult.totalSavedArticles === 0 &&
+    articlesAfterSecondSync.length === articlesAfterFirstSync.length &&
+    feedsAfterSecondSync.length === feedsAfterFirstSync.length;
+
+  console.log(`  Second sync status: ${secondResult.status}`);
+  console.log(`  Second sync saved articles: ${secondResult.totalSavedArticles}`);
+  console.log(`  Articles after first sync: ${articlesAfterFirstSync.length}`);
+  console.log(`  Articles after second sync: ${articlesAfterSecondSync.length}`);
+  console.log(`  Feeds after first sync: ${feedsAfterFirstSync.length}`);
+  console.log(`  Feeds after second sync: ${feedsAfterSecondSync.length}`);
+  console.log(
+    duplicateSyncPassed
+      ? '  ✅ Repeated sync did not create duplicate feeds or articles'
+      : '  ❌ Repeated sync created duplicate feeds or articles',
+  );
+
+  console.log();
   console.log('='.repeat(60));
 
   // 返回状态码
-  const success = result.status !== 'failed' && articles.length > 0;
+  const success = result.status !== 'failed' && articles.length > 0 && duplicateSyncPassed;
   if (success) {
     console.log('✅ Week 2 Smoke Test PASSED');
   } else {
