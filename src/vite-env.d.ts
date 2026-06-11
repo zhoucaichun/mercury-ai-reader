@@ -3,6 +3,15 @@
 import type { Week2Article, Week2ArticleContent, Week2Feed } from './core/types';
 import type { Week2Subscription } from './features/feed/sync/types';
 import type { Week2SyncAllResult } from './features/feed/sync/types';
+import type { Week3LLMConnectionTestResult } from './features/agent/providers/types';
+import type { Week3LLMUsageEvent, Week3LLMUsageSummary } from './features/usage/types';
+import type {
+  ReaderLLMProviderConfigInput,
+  Week3SummaryRequest,
+  Week3SummaryResult,
+  Week3TranslationRequest,
+  Week3TranslationResult
+} from './features/reader/week3AgentUiPort';
 
 type MercuryWeek2SyncPayload = {
   result: Week2SyncAllResult;
@@ -48,6 +57,17 @@ type MercuryRuntimeInfo = {
     isEnabled?: boolean;
     isDeleted?: boolean;
   }): Promise<MercuryWeek2SyncPayload>;
+  testLLMConnection(config: Required<ReaderLLMProviderConfigInput>): Promise<Week3LLMConnectionTestResult>;
+  generateSummary(input: {
+    config: Required<ReaderLLMProviderConfigInput>;
+    request: Week3SummaryRequest;
+  }): Promise<Week3SummaryResult>;
+  translateArticle(input: {
+    config: Required<ReaderLLMProviderConfigInput>;
+    request: Week3TranslationRequest;
+  }): Promise<Week3TranslationResult>;
+  listUsageEvents(): Promise<Week3LLMUsageEvent[]>;
+  getUsageSummary(): Promise<Week3LLMUsageSummary>;
 };
 
 declare global {

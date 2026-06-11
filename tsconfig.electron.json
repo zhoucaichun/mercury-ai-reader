@@ -14,7 +14,15 @@
   "include": [
     "electron",
     "src/core/database/**/*.ts",
+    "src/features/agent/providers/config.ts",
+    "src/features/agent/providers/mockProvider.ts",
+    "src/features/agent/providers/openAICompatibleProvider.ts",
+    "src/features/agent/providers/providerFactory.ts",
+    "src/features/agent/providers/tokenEstimate.ts",
+    "src/features/agent/providers/types.ts",
     "src/features/feed/**/*.ts",
-    "src/features/reader/pipeline/**/*.ts"
+    "src/features/reader/pipeline/**/*.ts",
+    "src/features/usage/types.ts",
+    "src/features/usage/usage.ts"
   ]
 }

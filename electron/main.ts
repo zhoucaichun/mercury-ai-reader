@@ -7,6 +7,13 @@ import {
   updateArticleState,
   updateFeedSubscription
 } from './week2-sync.js';
+import {
+  generateWeek3Summary,
+  getWeek3UsageSummary,
+  listWeek3UsageEvents,
+  testWeek3ProviderConnection,
+  translateWeek3Article
+} from './week3-ai.js';
 
 const devServerUrl = 'http://127.0.0.1:5173';
 let mainWindow: BrowserWindow | null = null;
@@ -50,6 +57,11 @@ ipcMain.handle('week2:import-opml', (_event, opmlText: string) => importOpmlAndS
 ipcMain.handle('week2:preview-opml', (_event, opmlText: string) => previewOpmlImport(opmlText));
 ipcMain.handle('week2:update-article-state', (_event, input) => updateArticleState(input));
 ipcMain.handle('week2:update-feed-subscription', (_event, input) => updateFeedSubscription(input));
+ipcMain.handle('week3:test-provider', (_event, config) => testWeek3ProviderConnection(config));
+ipcMain.handle('week3:generate-summary', (_event, input) => generateWeek3Summary(input));
+ipcMain.handle('week3:translate-article', (_event, input) => translateWeek3Article(input));
+ipcMain.handle('week3:list-usage-events', () => listWeek3UsageEvents());
+ipcMain.handle('week3:get-usage-summary', () => getWeek3UsageSummary());
 
 void app.whenReady().then(() => {
   createMainWindow();
