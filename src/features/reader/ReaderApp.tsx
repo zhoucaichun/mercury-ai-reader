@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState, type FocusEvent, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type FocusEvent, type MouseEvent, type ReactNode } from 'react';
 import {
   BarChart3,
   BookOpen,
-  ChevronDown,
-  ChevronUp,
   CheckCircle2,
   CircleAlert,
   Clock,
@@ -42,6 +40,8 @@ import { formatTokenCount, summarizeUsage } from '../usage/usage';
 import type { LLMUsageEvent } from '../usage/types';
 import {
   createBrowserWeek3AgentUiPort,
+  loadReaderLLMProviderConfig,
+  saveReaderLLMProviderConfig,
   type Week3AgentUiPort,
   type Week3SummaryDetailLevel,
   type Week3SummaryResult,
@@ -55,6 +55,7 @@ type FontSizeSetting = 'small' | 'medium' | 'large';
 type LineHeightSetting = 'compact' | 'comfortable' | 'loose';
 type SyncStatus = 'idle' | 'running' | 'succeeded' | 'failed';
 type UsageStatus = 'idle' | 'loading' | 'ready' | 'error';
+type ProviderStatus = 'idle' | 'saving' | 'testing' | 'succeeded' | 'failed';
 
 const uiCopy = {
   zh: {
@@ -76,11 +77,14 @@ const uiCopy = {
     collapseArticles: '收起文章列表',
     collapseFeeds: '收起订阅栏',
     collapseNav: '收起左侧',
+    collapseSummary: '收起摘要',
     compact: '紧凑',
     comfortable: '舒适',
     copy: '复制',
     copied: '已复制到剪贴板。',
     copyResult: '复制当前 AI 结果到剪贴板',
+    copySummary: '复制摘要',
+    copyTranslation: '复制译文',
     detail: '详细度',
     delete: '删除',
     disable: '停用',
@@ -96,11 +100,12 @@ const uiCopy = {
     generating: '生成中',
     help: '说明',
     helpBody: [
-      '输入 Feed URL 后点击“同步订阅源”；留空点击会同步默认示例源。',
+      '输入 Feed URL 后点击“同步订阅源”；留空点击会同步默认订阅源。',
       '在中间列表选择文章。正文加载完成后，可以直接生成摘要、翻译或导出 Markdown。',
+      '首次使用 AI 前，请在“阅读设置”里填写模型服务的 Base URL、Model 和 API Key。',
       'AI 面板用于调整摘要语言、翻译语言和查看模型调用记录。',
       '点击阅读区左侧的小按钮可以收起或展开左侧列表，进入专注阅读。',
-      '当前 AI 输出使用 mock fallback，用于演示流程和记录 usage；接入真实 Provider 后会显示模型输出。'
+      'API Key 只保存在当前设备的本地浏览器存储中，不要写入代码或提交到 GitHub。'
     ],
     helpTitle: '使用说明',
     importOpml: '导入 OPML',
@@ -115,7 +120,6 @@ const uiCopy = {
     loadingUsage: '正在加载 usage...',
     loose: '宽松',
     medium: '中',
-    mockProvider: 'Mock provider fallback',
     invalidFeedUrl: 'Feed URL 格式不正确。请检查是否以 http:// 或 https:// 开头，然后重试。',
     noArticle: '选择一篇文章开始阅读',
     noArticleBody: '左侧同步订阅源，中间选择文章；随后可以阅读正文、生成摘要、翻译并导出 Markdown。',
@@ -125,6 +129,24 @@ const uiCopy = {
     noUsage: '暂无 usage 记录。',
     openElectron: '请在 Electron 应用中运行真实 Feed 同步。',
     provider: 'Provider',
+    providerApiKey: 'API Key',
+    providerApiKeyHint: 'API Key 只保存在本机 localStorage，不会写入仓库。再次保存时如果留空，会沿用已保存的 key。',
+    providerApiKeyPlaceholder: '粘贴 API key，保存后仅留在本机',
+    providerBaseUrl: 'Base URL',
+    providerBaseUrlPlaceholder: '例如 https://api.example.com/v1',
+    providerConfigured: '模型服务已配置',
+    providerMissing: '模型服务未配置',
+    providerModel: 'Model',
+    providerModelPlaceholder: '例如 gpt-4o-mini 或学校模型名称',
+    providerSaved: '模型服务配置已保存。',
+    providerSettings: '模型服务',
+    providerSetupCta: '配置模型服务',
+    providerSetupPrompt: '开始前建议先配置模型服务。配置后可以直接生成摘要、翻译，并记录用量。',
+    providerRequiredAction: '请先配置模型服务，再使用摘要或翻译。',
+    providerTest: '测试连接',
+    providerTestFailed: '连接失败，请检查 Base URL、Model 和 API Key。',
+    providerTestSucceeded: '连接成功，可以生成摘要和翻译。',
+    saveProvider: '保存模型配置',
     read: '已读',
     readTooltip: '文章已读，点击标记为未读',
     readingSettings: '阅读设置',
@@ -133,6 +155,7 @@ const uiCopy = {
     regenerate: '重新生成',
     retranslate: '重新翻译',
     save: '收藏',
+    saving: '保存中',
     saveTooltip: '点击收藏当前文章',
     saved: '已收藏',
     savedTooltip: '文章已收藏，点击取消收藏',
@@ -143,6 +166,7 @@ const uiCopy = {
     showAi: '展开 AI 面板',
     showFeeds: '展开订阅栏',
     showNav: '展开左侧',
+    showSummary: '展开摘要',
     small: '小',
     source: '原文',
     sourceTooltip: '在浏览器中打开文章原文',
@@ -150,6 +174,7 @@ const uiCopy = {
     standard: '标准',
     succeeded: '成功',
     summary: '摘要',
+    summaryShownInBody: '摘要已生成，可在这里查看或复制。',
     summaryTooltip: '为当前文章生成摘要',
     summaryHint: '点击生成当前文章的摘要。',
     summarizing: '摘要中',
@@ -161,6 +186,7 @@ const uiCopy = {
     translate: '翻译',
     translateTooltip: '将当前文章翻译为目标语言',
     translating: '翻译中',
+    translationShownInBody: '译文已生成，可在这里查看或复制。',
     translationHint: '点击翻译当前文章正文。',
     unread: '未读',
     unreadTooltip: '点击标记文章为已读',
@@ -188,11 +214,14 @@ const uiCopy = {
     collapseArticles: 'Collapse Article List',
     collapseFeeds: 'Collapse Feeds',
     collapseNav: 'Collapse Sidebar',
+    collapseSummary: 'Collapse Summary',
     compact: 'Compact',
     comfortable: 'Comfortable',
     copy: 'Copy',
     copied: 'Copied to clipboard.',
     copyResult: 'Copy the current AI result to clipboard.',
+    copySummary: 'Copy summary',
+    copyTranslation: 'Copy translation',
     detail: 'Detail',
     delete: 'Delete',
     disable: 'Disable',
@@ -208,11 +237,12 @@ const uiCopy = {
     generating: 'Generating',
     help: 'Help',
     helpBody: [
-      'Enter a Feed URL and click Sync Feeds. Leave it empty to sync the default sample sources.',
+      'Enter a Feed URL and click Sync Feeds. Leave it empty to sync the default feeds.',
       'Select an article in the middle list. Once content loads, you can summarize, translate, or export Markdown.',
+      'Before using AI, open Reading Settings and fill in the model Base URL, Model, and API Key.',
       'Use the AI panel to adjust summary language, translation language, and inspect usage records.',
       'Use the small button on the left edge of the reader to hide or show the lists for focused reading.',
-      'AI output currently uses a mock fallback for the workflow and usage records. Real provider output can replace it later.'
+      'Your API key is stored only in local browser storage on this device. Do not put it in code or commit it to GitHub.'
     ],
     helpTitle: 'How to Use',
     importOpml: 'Import OPML',
@@ -227,7 +257,6 @@ const uiCopy = {
     loadingUsage: 'Loading usage...',
     loose: 'Loose',
     medium: 'Medium',
-    mockProvider: 'Mock provider fallback',
     invalidFeedUrl: 'The Feed URL is invalid. Check that it starts with http:// or https://, then try again.',
     noArticle: 'Choose an article to start reading',
     noArticleBody: 'Sync feeds on the left, choose an article in the middle, then read, summarize, translate, or export it.',
@@ -237,6 +266,24 @@ const uiCopy = {
     noUsage: 'No usage events yet.',
     openElectron: 'Open the Electron app to run the real Feed sync chain.',
     provider: 'Provider',
+    providerApiKey: 'API Key',
+    providerApiKeyHint: 'The API key is stored only in localStorage on this device. Leave it blank later to keep the saved key.',
+    providerApiKeyPlaceholder: 'Paste your API key; it stays on this device',
+    providerBaseUrl: 'Base URL',
+    providerBaseUrlPlaceholder: 'For example, https://api.example.com/v1',
+    providerConfigured: 'Model provider configured',
+    providerMissing: 'Model provider not configured',
+    providerModel: 'Model',
+    providerModelPlaceholder: 'For example, gpt-4o-mini or your school model',
+    providerSaved: 'Model provider settings saved.',
+    providerSettings: 'Model Provider',
+    providerSetupCta: 'Configure model',
+    providerSetupPrompt: 'Set up a model provider before reading so summary, translation, and usage records are ready.',
+    providerRequiredAction: 'Configure a model provider before using summary or translation.',
+    providerTest: 'Test connection',
+    providerTestFailed: 'Connection failed. Check Base URL, Model, and API Key.',
+    providerTestSucceeded: 'Connection succeeded. Summary and translation are ready.',
+    saveProvider: 'Save model settings',
     read: 'Read',
     readTooltip: 'This article is read. Click to mark it unread.',
     readingSettings: 'Reading Settings',
@@ -245,6 +292,7 @@ const uiCopy = {
     regenerate: 'Regenerate',
     retranslate: 'Retranslate',
     save: 'Save',
+    saving: 'Saving',
     saveTooltip: 'Save this article.',
     saved: 'Saved',
     savedTooltip: 'This article is saved. Click to unsave it.',
@@ -255,6 +303,7 @@ const uiCopy = {
     showAi: 'Show AI Panel',
     showFeeds: 'Show Feeds',
     showNav: 'Show Sidebar',
+    showSummary: 'Show Summary',
     small: 'Small',
     source: 'Source',
     sourceTooltip: 'Open the original article in your browser.',
@@ -262,6 +311,7 @@ const uiCopy = {
     standard: 'Standard',
     succeeded: 'Succeeded',
     summary: 'Summary',
+    summaryShownInBody: 'The summary is ready here for review or copying.',
     summaryTooltip: 'Generate a summary for the current article.',
     summaryHint: 'Generate a summary for the current article.',
     summarizing: 'Summarizing',
@@ -273,6 +323,7 @@ const uiCopy = {
     translate: 'Translate',
     translateTooltip: 'Translate the current article to the target language.',
     translating: 'Translating',
+    translationShownInBody: 'The translation is ready here for review or copying.',
     translationHint: 'Translate the current article content.',
     unread: 'Unread',
     unreadTooltip: 'Mark this article as read.',
@@ -485,11 +536,13 @@ function StatusPill({ status }: { status: AgentRunStatus }) {
 function EmptyState({
   actions,
   message,
+  notice,
   steps,
   title
 }: {
   actions?: ReactNode;
   message: string;
+  notice?: ReactNode;
   steps?: readonly string[];
   title: string;
 }) {
@@ -506,10 +559,168 @@ function EmptyState({
             ))}
           </div>
         ) : null}
+        {notice ? <div className="empty-notice">{notice}</div> : null}
         {actions ? <div className="empty-actions">{actions}</div> : null}
       </div>
     </div>
   );
+}
+
+function MarkdownView({ markdown }: { markdown: string }) {
+  const blocks: ReactNode[] = [];
+  const lines = markdown.split('\n');
+  let paragraph: string[] = [];
+  let listItems: string[] = [];
+  let codeLines: string[] = [];
+  let inCodeBlock = false;
+
+  const flushParagraph = () => {
+    if (paragraph.length === 0) return;
+    const text = paragraph.join(' ').trim();
+    if (text) {
+      blocks.push(<p key={`p-${blocks.length}`}>{renderInlineMarkdown(text)}</p>);
+    }
+    paragraph = [];
+  };
+
+  const flushList = () => {
+    if (listItems.length === 0) return;
+    blocks.push(
+      <ul key={`ul-${blocks.length}`}>
+        {listItems.map((item, index) => (
+          <li key={`${item}-${index}`}>{renderInlineMarkdown(item)}</li>
+        ))}
+      </ul>
+    );
+    listItems = [];
+  };
+
+  const flushCode = () => {
+    if (codeLines.length === 0) return;
+    blocks.push(
+      <pre className="markdown-code" key={`code-${blocks.length}`}>
+        <code>{codeLines.join('\n')}</code>
+      </pre>
+    );
+    codeLines = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    if (line.startsWith('```')) {
+      if (inCodeBlock) {
+        flushCode();
+        inCodeBlock = false;
+      } else {
+        flushParagraph();
+        flushList();
+        inCodeBlock = true;
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeLines.push(rawLine);
+      continue;
+    }
+
+    if (!line) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    if (/^---+$/.test(line)) {
+      flushParagraph();
+      flushList();
+      blocks.push(<hr key={`hr-${blocks.length}`} />);
+      continue;
+    }
+
+    const heading = /^(#{1,4})\s+(.+)$/.exec(line);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      const level = Math.min(heading[1].length + 2, 5);
+      blocks.push(renderMarkdownHeading(level, heading[2], `h-${blocks.length}`));
+      continue;
+    }
+
+    const bullet = /^[-*]\s+(.+)$/.exec(line);
+    if (bullet) {
+      flushParagraph();
+      listItems.push(bullet[1]);
+      continue;
+    }
+
+    const numbered = /^\d+\.\s+(.+)$/.exec(line);
+    if (numbered) {
+      flushParagraph();
+      listItems.push(numbered[1]);
+      continue;
+    }
+
+    flushList();
+    paragraph.push(line);
+  }
+
+  flushParagraph();
+  flushList();
+  flushCode();
+
+  return <div className="markdown-output">{blocks}</div>;
+}
+
+function renderMarkdownHeading(level: number, text: string, key: string) {
+  if (level <= 3) {
+    return <h3 key={key}>{renderInlineMarkdown(text)}</h3>;
+  }
+
+  if (level === 4) {
+    return <h4 key={key}>{renderInlineMarkdown(text)}</h4>;
+  }
+
+  return <h5 key={key}>{renderInlineMarkdown(text)}</h5>;
+}
+
+function renderInlineMarkdown(text: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  const pattern = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\(https?:\/\/[^)]+\))/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text))) {
+    if (match.index > lastIndex) {
+      nodes.push(text.slice(lastIndex, match.index));
+    }
+
+    const token = match[0];
+    if (token.startsWith('**')) {
+      nodes.push(<strong key={`strong-${match.index}`}>{token.slice(2, -2)}</strong>);
+    } else if (token.startsWith('`')) {
+      nodes.push(<code key={`code-${match.index}`}>{token.slice(1, -1)}</code>);
+    } else {
+      const link = /^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/.exec(token);
+      if (link) {
+        nodes.push(
+          <a href={link[2]} key={`link-${match.index}`} rel="noreferrer" target="_blank">
+            {link[1]}
+          </a>
+        );
+      } else {
+        nodes.push(token);
+      }
+    }
+
+    lastIndex = match.index + token.length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+
+  return nodes;
 }
 
 function DialogShell({
@@ -550,7 +761,7 @@ function DialogShell({
 }
 
 export function ReaderApp() {
-  const [agentUiPort] = useState<Week3AgentUiPort>(() => createBrowserWeek3AgentUiPort());
+  const [agentUiPort, setAgentUiPort] = useState<Week3AgentUiPort>(() => createBrowserWeek3AgentUiPort());
   const [dataPort, setDataPort] = useState<Week2ReaderDataPort>(() => emptyReaderDataPort);
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
@@ -564,7 +775,7 @@ export function ReaderApp() {
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>('zh');
   const [isFeedsCollapsed, setIsFeedsCollapsed] = useState(false);
   const [isArticleListCollapsed, setIsArticleListCollapsed] = useState(false);
-  const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(false);
+  const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(true);
   const [fontSize, setFontSize] = useState<FontSizeSetting>('medium');
   const [lineHeight, setLineHeight] = useState<LineHeightSetting>('comfortable');
   const [feedsStatus, setFeedsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -587,8 +798,27 @@ export function ReaderApp() {
   const [translationError, setTranslationError] = useState('');
   const [usageEvents, setUsageEvents] = useState<LLMUsageEvent[]>([]);
   const [usageStatus, setUsageStatus] = useState<UsageStatus>('idle');
+  const [providerBaseUrl, setProviderBaseUrl] = useState('');
+  const [providerModel, setProviderModel] = useState('');
+  const [providerApiKey, setProviderApiKey] = useState('');
+  const [providerConfigured, setProviderConfigured] = useState(false);
+  const [providerStatus, setProviderStatus] = useState<ProviderStatus>('idle');
+  const [providerMessage, setProviderMessage] = useState('');
   const [exportMessage, setExportMessage] = useState('');
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+  const [feedsWidth, setFeedsWidth] = useState(300);
+  const [articlesWidth, setArticlesWidth] = useState(360);
+  const [aiWidth, setAiWidth] = useState(340);
+  const resizeRef = useRef<{ panel: 'feeds' | 'articles' | 'ai'; startX: number; startWidth: number } | null>(null);
+
+  useEffect(() => {
+    const config = loadReaderLLMProviderConfig();
+    setProviderConfigured(Boolean(config));
+    if (config) {
+      setProviderBaseUrl(config.baseUrl);
+      setProviderModel(config.model);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -692,6 +922,29 @@ export function ReaderApp() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeDialog]);
 
+  useEffect(() => {
+    const handleMouseMove = (e: globalThis.MouseEvent) => {
+      if (!resizeRef.current) return;
+      const { panel, startX, startWidth } = resizeRef.current;
+      const delta = e.clientX - startX;
+      const newWidth = Math.max(200, Math.min(600, startWidth + delta));
+      if (panel === 'feeds') setFeedsWidth(newWidth);
+      else if (panel === 'articles') setArticlesWidth(newWidth);
+      else setAiWidth(newWidth);
+    };
+    const handleMouseUp = () => {
+      resizeRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
   const selectedArticle = articles.find((article) => article.id === selectedArticleId);
   const selectedArticleState = selectedArticle as (typeof selectedArticle & { isRead?: boolean; isStarred?: boolean });
   const selectedArticleIsRead = Boolean(selectedArticleState?.isRead ?? selectedArticleState?.readState !== 'unread');
@@ -702,14 +955,24 @@ export function ReaderApp() {
   const runtime = window.mercury;
   const readerClassName = `reader-content reader-font-${fontSize} reader-line-${lineHeight}`;
   const hasCanonicalMarkdown = Boolean(selectedContent?.canonicalMarkdown.trim());
+  const currentSummaryMarkdown = summaryResult?.articleId === selectedArticleId ? summaryResult.markdown : '';
+  const currentTranslationMarkdown =
+    translationResult?.articleId === selectedArticleId ? translationResult.markdown : '';
   const copy = uiCopy[uiLanguage];
   const shellClassName = [
     'app-shell',
     isFeedsCollapsed ? 'is-feeds-collapsed' : '',
-    isArticleListCollapsed ? 'is-articles-collapsed' : ''
+    isArticleListCollapsed ? 'is-articles-collapsed' : '',
+    isInspectorCollapsed ? 'is-ai-collapsed' : 'is-ai-open'
   ]
     .filter(Boolean)
     .join(' ');
+
+  const gridStyle = {
+    '--feeds-w': isFeedsCollapsed ? '44px' : `${feedsWidth}px`,
+    '--articles-w': isArticleListCollapsed ? '44px' : `${articlesWidth}px`,
+    '--ai-w': isInspectorCollapsed ? '44px' : `${aiWidth}px`,
+  } as Record<string, string>;
 
   useEffect(() => {
     if (syncStatus === 'idle') {
@@ -744,6 +1007,33 @@ export function ReaderApp() {
     };
   }
 
+  function openAiPanel(panel?: ActivePanel) {
+    if (panel) {
+      setActivePanel(panel);
+    }
+    setIsInspectorCollapsed(false);
+  }
+
+  function closeAiPanel() {
+    setIsInspectorCollapsed(true);
+  }
+
+  function toggleAiPanel() {
+    if (isInspectorCollapsed) {
+      openAiPanel(activePanel);
+    } else {
+      closeAiPanel();
+    }
+  }
+
+  function startResize(e: MouseEvent<HTMLElement>, panel: 'feeds' | 'articles' | 'ai') {
+    e.preventDefault();
+    const startWidth = panel === 'feeds' ? feedsWidth : panel === 'articles' ? articlesWidth : aiWidth;
+    resizeRef.current = { panel, startX: e.clientX, startWidth };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }
+
   async function refreshUsageEvents() {
     if (!agentUiPort.listUsageEvents) {
       return;
@@ -775,8 +1065,12 @@ export function ReaderApp() {
   }
 
   async function handleGenerateSummary(regenerate = false) {
-    setActivePanel('summary');
-    setIsInspectorCollapsed(false);
+    openAiPanel('summary');
+
+    if (!ensureProviderConfigured('summary')) {
+      return;
+    }
+
     setSummaryStatus('running');
     setSummaryError('');
 
@@ -798,8 +1092,12 @@ export function ReaderApp() {
   }
 
   async function handleTranslateArticle(regenerate = false) {
-    setActivePanel('translation');
-    setIsInspectorCollapsed(false);
+    openAiPanel('translation');
+
+    if (!ensureProviderConfigured('translation')) {
+      return;
+    }
+
     setTranslationStatus('running');
     setTranslationError('');
 
@@ -846,6 +1144,87 @@ export function ReaderApp() {
     if (!output?.trim()) return;
     await navigator.clipboard?.writeText(output);
     setExportMessage(copy.copied);
+  }
+
+  function ensureProviderConfigured(agentType: 'summary' | 'translation') {
+    if (loadReaderLLMProviderConfig()) {
+      return true;
+    }
+
+    setProviderConfigured(false);
+    setProviderStatus('failed');
+    setProviderMessage(copy.providerRequiredAction);
+    setActiveDialog('settings');
+
+    if (agentType === 'summary') {
+      setSummaryStatus('failed');
+      setSummaryError(copy.providerRequiredAction);
+    } else {
+      setTranslationStatus('failed');
+      setTranslationError(copy.providerRequiredAction);
+    }
+
+    return false;
+  }
+
+  async function handleSaveProviderConfig() {
+    setProviderStatus('saving');
+    setProviderMessage('');
+
+    try {
+      const config = saveReaderLLMProviderConfig({
+        baseUrl: providerBaseUrl,
+        model: providerModel,
+        apiKey: providerApiKey
+      });
+      setProviderBaseUrl(config.baseUrl);
+      setProviderModel(config.model);
+      setProviderApiKey('');
+      setProviderConfigured(true);
+      setAgentUiPort(createBrowserWeek3AgentUiPort());
+      setProviderStatus('succeeded');
+      setProviderMessage(copy.providerSaved);
+      await refreshUsageEvents();
+    } catch (error) {
+      setProviderStatus('failed');
+      setProviderMessage(error instanceof Error ? error.message : copy.providerTestFailed);
+    }
+  }
+
+  async function handleTestProviderConnection() {
+    setProviderStatus('testing');
+    setProviderMessage('');
+
+    try {
+      if (providerBaseUrl.trim() && providerModel.trim()) {
+        const config = saveReaderLLMProviderConfig({
+          baseUrl: providerBaseUrl,
+          model: providerModel,
+          apiKey: providerApiKey
+        });
+        setProviderBaseUrl(config.baseUrl);
+        setProviderModel(config.model);
+        setProviderApiKey('');
+        setProviderConfigured(true);
+      }
+
+      const port = createBrowserWeek3AgentUiPort();
+      setAgentUiPort(port);
+      const result = await port.testConnection?.();
+      await refreshUsageEvents();
+
+      if (result?.status === 'succeeded') {
+        setProviderStatus('succeeded');
+        setProviderMessage(`${copy.providerTestSucceeded} ${result.latencyMs ?? 0}ms`);
+      } else {
+        setProviderStatus('failed');
+        setProviderMessage(result?.errorMessage || copy.providerTestFailed);
+      }
+    } catch (error) {
+      await refreshUsageEvents();
+      setProviderStatus('failed');
+      setProviderMessage(error instanceof Error ? error.message : copy.providerTestFailed);
+    }
   }
 
   function handleFeedSelect(feedId: string) {
@@ -971,8 +1350,9 @@ export function ReaderApp() {
   }
 
   return (
-    <main className={shellClassName}>
+    <main className={shellClassName} style={gridStyle}>
       <aside className="sidebar" aria-label={copy.feeds}>
+        {!isFeedsCollapsed && <div className="resize-handle" onMouseDown={(e) => startResize(e, 'feeds')} />}
         <div className="brand-block">
           <div>
             <p className="eyebrow">Mercury</p>
@@ -1095,6 +1475,7 @@ export function ReaderApp() {
       </aside>
 
       <section className="article-list-panel" aria-label={copy.articles}>
+        {!isArticleListCollapsed && <div className="resize-handle" onMouseDown={(e) => startResize(e, 'articles')} />}
         <div className="panel-heading">
           <div>
             <p className="eyebrow">{selectedFeed?.title ?? 'Feeds'}</p>
@@ -1132,6 +1513,244 @@ export function ReaderApp() {
           {isArticleListCollapsed ? <PanelLeftOpen size={17} aria-hidden="true" /> : <PanelLeftClose size={17} aria-hidden="true" />}
         </button>
       </section>
+
+      <aside className={`inspector-panel ${isInspectorCollapsed ? 'is-collapsed' : ''}`}>
+        <button
+          className="column-edge-toggle ai-edge-toggle"
+          type="button"
+          aria-label={isInspectorCollapsed ? copy.showAi : copy.collapseAi}
+          title={isInspectorCollapsed ? copy.showAi : copy.collapseAi}
+          onClick={toggleAiPanel}
+        >
+          {isInspectorCollapsed ? <PanelLeftOpen size={17} aria-hidden="true" /> : <PanelLeftClose size={17} aria-hidden="true" />}
+        </button>
+        {!isInspectorCollapsed && <div className="resize-handle" onMouseDown={(e) => startResize(e, 'ai')} />}
+
+        {!isInspectorCollapsed && activePanel === 'usage' ? (
+          <div className="inspector-section">
+            <div className="inspector-title">
+              <Database size={17} aria-hidden="true" />
+              <span>{copy.usage}</span>
+            </div>
+            <div className="usage-total">{formatTokenCount(usageSummary.totalTokens)} {copy.tokens}</div>
+            <div className="usage-metrics">
+              <span>
+                <strong>{usageSummary.totalCalls}</strong>
+                {copy.calls}
+              </span>
+              <span>
+                <strong>{usageSummary.succeededCalls}</strong>
+                {copy.succeeded}
+              </span>
+              <span>
+                <strong>{usageSummary.failedCalls}</strong>
+                {copy.failed}
+              </span>
+            </div>
+            <div className="usage-breakdown">
+              {usageSummary.byPurpose.length === 0 ? (
+                <span>{copy.noUsage}</span>
+              ) : (
+                usageSummary.byPurpose.map((row) => (
+                  <span key={row.purpose}>
+                    {row.purpose}: {row.calls} {copy.calls}, {formatTokenCount(row.totalTokens)} {copy.tokens}
+                  </span>
+                ))
+              )}
+            </div>
+            <div className="usage-list">
+              {usageStatus === 'loading' ? <span className="state-line">{copy.loadingUsage}</span> : null}
+              {usageStatus === 'error' ? (
+                <span className="state-line state-line-error">Usage failed to load</span>
+              ) : null}
+              {usageSummary.recent.map((event) => (
+                <div className="usage-row" key={event.id}>
+                  <span>{event.purpose}</span>
+                  <strong>{formatTokenCount(event.totalTokens ?? 0)}</strong>
+                  <span className={`usage-status usage-status-${event.status}`}>{event.status}</span>
+                </div>
+              ))}
+            </div>
+            <button className="tool-button is-full" type="button" title={copy.refresh} onClick={() => void refreshUsageEvents()}>
+              <RefreshCw size={16} aria-hidden="true" />
+              {copy.refresh}
+            </button>
+          </div>
+        ) : null}
+
+        {!isInspectorCollapsed && (activePanel === 'summary' || activePanel === 'translation') ? (
+          <div className="inspector-section">
+            <div className="inspector-title">
+              {activePanel === 'summary' ? (
+                <Sparkles size={17} aria-hidden="true" />
+              ) : (
+                <Languages size={17} aria-hidden="true" />
+              )}
+              <span>{activePanel === 'summary' ? copy.summary : copy.translate}</span>
+            </div>
+            {activePanel === 'summary' ? (
+              <div className="agent-controls">
+                <label className="setting-group">
+                  <span className="setting-label">{copy.targetLanguage}</span>
+                  <select value={summaryTargetLanguage} onChange={(event) => setSummaryTargetLanguage(event.target.value)}>
+                    <option value="zh-CN">{copy.chinese}</option>
+                    <option value="en-US">{copy.english}</option>
+                    <option value="ja-JP">{copy.japanese}</option>
+                  </select>
+                </label>
+                <div className="setting-group">
+                  <span className="setting-label">{copy.detail}</span>
+                  <div className="segmented-control" role="group" aria-label={copy.detail}>
+                    {(['brief', 'standard'] as const).map((value) => (
+                      <button
+                        className={summaryDetailLevel === value ? 'is-selected' : ''}
+                        key={value}
+                        type="button"
+                        title={copy[value]}
+                        onClick={() => setSummaryDetailLevel(value)}
+                      >
+                        {copy[value]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  className="primary-button is-compact"
+                  type="button"
+                  disabled={!hasCanonicalMarkdown || summaryStatus === 'running'}
+                  title={currentSummaryMarkdown ? copy.regenerate : copy.generate}
+                  onClick={() => void handleGenerateSummary(Boolean(currentSummaryMarkdown))}
+                >
+                  <Sparkles size={16} aria-hidden="true" />
+                  {summaryStatus === 'running' ? copy.generating : currentSummaryMarkdown ? copy.regenerate : copy.generate}
+                </button>
+              </div>
+            ) : (
+              <div className="agent-controls">
+                <label className="setting-group">
+                  <span className="setting-label">{copy.targetLanguage}</span>
+                  <select
+                    value={translationTargetLanguage}
+                    onChange={(event) => setTranslationTargetLanguage(event.target.value)}
+                  >
+                    <option value="zh-CN">{copy.chinese}</option>
+                    <option value="en-US">{copy.english}</option>
+                    <option value="ja-JP">{copy.japanese}</option>
+                  </select>
+                </label>
+                <label className="setting-group">
+                  <span className="setting-label">{copy.sourceLanguage}</span>
+                  <select value={sourceLanguage} onChange={(event) => setSourceLanguage(event.target.value)}>
+                    <option value="auto">{copy.auto}</option>
+                    <option value="en-US">{copy.english}</option>
+                    <option value="zh-CN">{copy.chinese}</option>
+                    <option value="ja-JP">{copy.japanese}</option>
+                  </select>
+                </label>
+                <button
+                  className="primary-button is-compact"
+                  type="button"
+                  disabled={!hasCanonicalMarkdown || translationStatus === 'running'}
+                  title={currentTranslationMarkdown ? copy.retranslate : copy.translate}
+                  onClick={() => void handleTranslateArticle(Boolean(currentTranslationMarkdown))}
+                >
+                  <Languages size={16} aria-hidden="true" />
+                  {translationStatus === 'running' ? copy.translating : currentTranslationMarkdown ? copy.retranslate : copy.translate}
+                </button>
+              </div>
+            )}
+            <div className="agent-status-list">
+              <div className="agent-status-row">
+                <span>{activePanel}</span>
+                <StatusPill status={activePanel === 'summary' ? summaryStatus : translationStatus} />
+              </div>
+            </div>
+            {activePanel === 'summary' && summaryError ? <p className="agent-error">{summaryError}</p> : null}
+            {activePanel === 'translation' && translationError ? (
+              <p className="agent-error">{translationError}</p>
+            ) : null}
+            <div className="agent-output">
+              {activePanel === 'summary' && currentSummaryMarkdown ? (
+                <MarkdownView markdown={currentSummaryMarkdown} />
+              ) : activePanel === 'translation' && currentTranslationMarkdown ? (
+                <MarkdownView markdown={currentTranslationMarkdown} />
+              ) : (
+                <p className="agent-output-placeholder">
+                  {activePanel === 'summary'
+                    ? hasCanonicalMarkdown
+                      ? copy.summaryHint
+                      : 'Sync and select an article with canonicalMarkdown before running AI processing.'
+                    : hasCanonicalMarkdown
+                      ? copy.translationHint
+                      : 'Sync and select an article with canonicalMarkdown before running AI processing.'}
+                </p>
+              )}
+            </div>
+            <div className="inspector-actions">
+              <button
+                className="icon-button"
+                type="button"
+                aria-label={copy.regenerate}
+                title={copy.regenerate}
+                disabled={!hasCanonicalMarkdown}
+                onClick={() =>
+                  activePanel === 'summary'
+                    ? void handleGenerateSummary(true)
+                    : void handleTranslateArticle(true)
+                }
+              >
+                <RotateCcw size={16} aria-hidden="true" />
+              </button>
+              <button
+                className="tool-button agent-copy-button"
+                type="button"
+                aria-label={activePanel === 'summary' ? copy.copySummary : copy.copyTranslation}
+                title={activePanel === 'summary' ? copy.copySummary : copy.copyTranslation}
+                disabled={activePanel === 'summary' ? !currentSummaryMarkdown : !currentTranslationMarkdown}
+                onClick={() =>
+                  void handleCopyAgentOutput(
+                    activePanel === 'summary' ? currentSummaryMarkdown : currentTranslationMarkdown
+                  )
+                }
+              >
+                <Copy size={16} aria-hidden="true" />
+                {activePanel === 'summary' ? copy.copySummary : copy.copyTranslation}
+              </button>
+              <button
+                className="icon-button"
+                type="button"
+                aria-label={copy.clear}
+                title={copy.clear}
+                onClick={() => {
+                  if (activePanel === 'summary') {
+                    setSummaryStatus('idle');
+                    setSummaryResult(null);
+                    setSummaryError('');
+                  } else {
+                    setTranslationStatus('idle');
+                    setTranslationResult(null);
+                    setTranslationError('');
+                  }
+                }}
+              >
+                <Trash2 size={16} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="provider-line">
+              <Wifi size={16} aria-hidden="true" />
+              <span>
+                {activePanel === 'summary' && currentSummaryMarkdown && summaryResult
+                  ? `${summaryResult.providerName} / ${summaryResult.model}`
+                  : activePanel === 'translation' && currentTranslationMarkdown && translationResult
+                    ? `${translationResult.providerName} / ${translationResult.model}`
+                    : providerConfigured
+                      ? copy.providerConfigured
+                      : copy.providerMissing}
+              </span>
+            </div>
+          </div>
+        ) : null}
+      </aside>
 
       <section className="reader-panel" aria-label="Reader">
         {selectedArticle ? (
@@ -1177,7 +1796,7 @@ export function ReaderApp() {
                   aria-label={copy.summary}
                   {...tooltipProps(copy.summaryTooltip)}
                   onClick={() =>
-                    hasCanonicalMarkdown ? void handleGenerateSummary(Boolean(summaryResult)) : setActivePanel('summary')
+                    hasCanonicalMarkdown ? void handleGenerateSummary(Boolean(currentSummaryMarkdown)) : openAiPanel('summary')
                   }
                 >
                   <Sparkles size={17} aria-hidden="true" />
@@ -1191,8 +1810,8 @@ export function ReaderApp() {
                   {...tooltipProps(copy.translateTooltip)}
                   onClick={() =>
                     hasCanonicalMarkdown
-                      ? void handleTranslateArticle(Boolean(translationResult))
-                      : setActivePanel('translation')
+                      ? void handleTranslateArticle(Boolean(currentTranslationMarkdown))
+                      : openAiPanel('translation')
                   }
                 >
                   <Languages size={17} aria-hidden="true" />
@@ -1204,8 +1823,7 @@ export function ReaderApp() {
                   aria-label={copy.usage}
                   {...tooltipProps(copy.usageTooltip)}
                   onClick={() => {
-                    setIsInspectorCollapsed(false);
-                    setActivePanel('usage');
+                    openAiPanel('usage');
                   }}
                 >
                   <BarChart3 size={17} aria-hidden="true" />
@@ -1251,234 +1869,6 @@ export function ReaderApp() {
                 </article>
               ) : null}
 
-              <aside className={`inspector-panel ${isInspectorCollapsed ? 'is-collapsed' : ''}`}>
-                <button
-                  className="inspector-toggle-bar"
-                  type="button"
-                  title={isInspectorCollapsed ? copy.showAi : copy.collapseAi}
-                  aria-label={isInspectorCollapsed ? copy.showAi : copy.collapseAi}
-                  onClick={() => setIsInspectorCollapsed((current) => !current)}
-                >
-                  {isInspectorCollapsed ? <ChevronDown size={17} aria-hidden="true" /> : <ChevronUp size={17} aria-hidden="true" />}
-                  {isInspectorCollapsed ? copy.showAi : copy.collapseAi}
-                </button>
-
-                {!isInspectorCollapsed && activePanel === 'usage' ? (
-                  <div className="inspector-section">
-                    <div className="inspector-title">
-                      <Database size={17} aria-hidden="true" />
-                      <span>{copy.usage}</span>
-                    </div>
-                    <div className="usage-total">{formatTokenCount(usageSummary.totalTokens)} {copy.tokens}</div>
-                    <div className="usage-metrics">
-                      <span>
-                        <strong>{usageSummary.totalCalls}</strong>
-                        {copy.calls}
-                      </span>
-                      <span>
-                        <strong>{usageSummary.succeededCalls}</strong>
-                        {copy.succeeded}
-                      </span>
-                      <span>
-                        <strong>{usageSummary.failedCalls}</strong>
-                        {copy.failed}
-                      </span>
-                    </div>
-                    <div className="usage-breakdown">
-                      {usageSummary.byPurpose.length === 0 ? (
-                        <span>{copy.noUsage}</span>
-                      ) : (
-                        usageSummary.byPurpose.map((row) => (
-                          <span key={row.purpose}>
-                            {row.purpose}: {row.calls} {copy.calls}, {formatTokenCount(row.totalTokens)} {copy.tokens}
-                          </span>
-                        ))
-                      )}
-                    </div>
-                    <div className="usage-list">
-                      {usageStatus === 'loading' ? <span className="state-line">{copy.loadingUsage}</span> : null}
-                      {usageStatus === 'error' ? (
-                        <span className="state-line state-line-error">Usage failed to load</span>
-                      ) : null}
-                      {usageSummary.recent.map((event) => (
-                        <div className="usage-row" key={event.id}>
-                          <span>{event.purpose}</span>
-                          <strong>{formatTokenCount(event.totalTokens ?? 0)}</strong>
-                          <span className={`usage-status usage-status-${event.status}`}>{event.status}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <button className="tool-button is-full" type="button" title={copy.refresh} onClick={() => void refreshUsageEvents()}>
-                      <RefreshCw size={16} aria-hidden="true" />
-                      {copy.refresh}
-                    </button>
-                  </div>
-                ) : null}
-
-                {!isInspectorCollapsed && (activePanel === 'summary' || activePanel === 'translation') ? (
-                  <div className="inspector-section">
-                    <div className="inspector-title">
-                      {activePanel === 'summary' ? (
-                        <Sparkles size={17} aria-hidden="true" />
-                      ) : (
-                        <Languages size={17} aria-hidden="true" />
-                      )}
-                      <span>{activePanel === 'summary' ? copy.summary : copy.translate}</span>
-                    </div>
-                    {activePanel === 'summary' ? (
-                      <div className="agent-controls">
-                        <label className="setting-group">
-                          <span className="setting-label">{copy.targetLanguage}</span>
-                          <select value={summaryTargetLanguage} onChange={(event) => setSummaryTargetLanguage(event.target.value)}>
-                            <option value="zh-CN">{copy.chinese}</option>
-                            <option value="en-US">{copy.english}</option>
-                            <option value="ja-JP">{copy.japanese}</option>
-                          </select>
-                        </label>
-                        <div className="setting-group">
-                          <span className="setting-label">{copy.detail}</span>
-                          <div className="segmented-control" role="group" aria-label={copy.detail}>
-                            {(['brief', 'standard'] as const).map((value) => (
-                              <button
-                                className={summaryDetailLevel === value ? 'is-selected' : ''}
-                                key={value}
-                                type="button"
-                                title={copy[value]}
-                                onClick={() => setSummaryDetailLevel(value)}
-                              >
-                                {copy[value]}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <button
-                          className="primary-button is-compact"
-                          type="button"
-                          disabled={!hasCanonicalMarkdown || summaryStatus === 'running'}
-                          title={summaryResult ? copy.regenerate : copy.generate}
-                          onClick={() => void handleGenerateSummary(Boolean(summaryResult))}
-                        >
-                          <Sparkles size={16} aria-hidden="true" />
-                          {summaryStatus === 'running' ? copy.generating : summaryResult ? copy.regenerate : copy.generate}
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="agent-controls">
-                        <label className="setting-group">
-                          <span className="setting-label">{copy.targetLanguage}</span>
-                          <select
-                            value={translationTargetLanguage}
-                            onChange={(event) => setTranslationTargetLanguage(event.target.value)}
-                          >
-                            <option value="zh-CN">{copy.chinese}</option>
-                            <option value="en-US">{copy.english}</option>
-                            <option value="ja-JP">{copy.japanese}</option>
-                          </select>
-                        </label>
-                        <label className="setting-group">
-                          <span className="setting-label">{copy.sourceLanguage}</span>
-                          <select value={sourceLanguage} onChange={(event) => setSourceLanguage(event.target.value)}>
-                            <option value="auto">{copy.auto}</option>
-                            <option value="en-US">{copy.english}</option>
-                            <option value="zh-CN">{copy.chinese}</option>
-                            <option value="ja-JP">{copy.japanese}</option>
-                          </select>
-                        </label>
-                        <button
-                          className="primary-button is-compact"
-                          type="button"
-                          disabled={!hasCanonicalMarkdown || translationStatus === 'running'}
-                          title={translationResult ? copy.retranslate : copy.translate}
-                          onClick={() => void handleTranslateArticle(Boolean(translationResult))}
-                        >
-                          <Languages size={16} aria-hidden="true" />
-                          {translationStatus === 'running' ? copy.translating : translationResult ? copy.retranslate : copy.translate}
-                        </button>
-                      </div>
-                    )}
-                    <div className="agent-status-list">
-                      <div className="agent-status-row">
-                        <span>{activePanel}</span>
-                        <StatusPill status={activePanel === 'summary' ? summaryStatus : translationStatus} />
-                      </div>
-                    </div>
-                    {activePanel === 'summary' && summaryError ? <p className="agent-error">{summaryError}</p> : null}
-                    {activePanel === 'translation' && translationError ? (
-                      <p className="agent-error">{translationError}</p>
-                    ) : null}
-                    <pre className="agent-output">
-                      {activePanel === 'summary'
-                        ? summaryResult?.markdown ??
-                          (hasCanonicalMarkdown
-                            ? copy.summaryHint
-                            : 'Sync and select an article with canonicalMarkdown before running AI processing.')
-                        : translationResult?.markdown ??
-                          (hasCanonicalMarkdown
-                            ? copy.translationHint
-                            : 'Sync and select an article with canonicalMarkdown before running AI processing.')}
-                    </pre>
-                    <div className="inspector-actions">
-                      <button
-                        className="icon-button"
-                        type="button"
-                        aria-label={copy.regenerate}
-                        title={copy.regenerate}
-                        disabled={!hasCanonicalMarkdown}
-                        onClick={() =>
-                          activePanel === 'summary'
-                            ? void handleGenerateSummary(true)
-                            : void handleTranslateArticle(true)
-                        }
-                      >
-                        <RotateCcw size={16} aria-hidden="true" />
-                      </button>
-                      <button
-                        className="icon-button"
-                        type="button"
-                        aria-label={copy.copy}
-                        title={copy.copy}
-                        disabled={activePanel === 'summary' ? !summaryResult : !translationResult}
-                        onClick={() =>
-                          void handleCopyAgentOutput(
-                            activePanel === 'summary' ? summaryResult?.markdown : translationResult?.markdown
-                          )
-                        }
-                      >
-                        <Copy size={16} aria-hidden="true" />
-                      </button>
-                      <button
-                        className="icon-button"
-                        type="button"
-                        aria-label={copy.clear}
-                        title={copy.clear}
-                        onClick={() => {
-                          if (activePanel === 'summary') {
-                            setSummaryStatus('idle');
-                            setSummaryResult(null);
-                            setSummaryError('');
-                          } else {
-                            setTranslationStatus('idle');
-                            setTranslationResult(null);
-                            setTranslationError('');
-                          }
-                        }}
-                      >
-                        <Trash2 size={16} aria-hidden="true" />
-                      </button>
-                    </div>
-                    <div className="provider-line">
-                      <Wifi size={16} aria-hidden="true" />
-                      <span>
-                        {activePanel === 'summary' && summaryResult
-                          ? `${summaryResult.providerName} / ${summaryResult.model}`
-                          : activePanel === 'translation' && translationResult
-                            ? `${translationResult.providerName} / ${translationResult.model}`
-                            : copy.mockProvider}
-                      </span>
-                    </div>
-                  </div>
-                ) : null}
-              </aside>
             </div>
 
           </>
@@ -1487,11 +1877,31 @@ export function ReaderApp() {
             title={copy.noArticle}
             message={copy.noArticleBody}
             steps={copy.welcomeSteps}
+            notice={
+              <>
+                <Wifi size={18} aria-hidden="true" />
+                <span>{providerConfigured ? copy.providerConfigured : copy.providerSetupPrompt}</span>
+              </>
+            }
             actions={
               <>
                 <button className="primary-button" type="button" onClick={handleRunWeek2Sync} disabled={syncStatus === 'running'}>
                   {syncStatus === 'running' ? <RefreshCw className="spin-icon" size={17} aria-hidden="true" /> : <Plus size={17} aria-hidden="true" />}
                   {syncStatus === 'running' ? copy.syncing : copy.syncFeeds}
+                </button>
+                <button
+                  className={providerConfigured ? 'tool-button' : 'tool-button is-active'}
+                  type="button"
+                  onClick={() => {
+                    if (!providerConfigured) {
+                      setProviderStatus('failed');
+                      setProviderMessage(copy.providerSetupPrompt);
+                    }
+                    setActiveDialog('settings');
+                  }}
+                >
+                  <Settings size={17} aria-hidden="true" />
+                  {providerConfigured ? copy.providerSettings : copy.providerSetupCta}
                 </button>
                 <button
                   className="tool-button"
@@ -1566,6 +1976,70 @@ export function ReaderApp() {
               ))}
             </div>
           </div>
+          <section className="settings-section" aria-label={copy.providerSettings}>
+            <div className="settings-section-header">
+              <Wifi size={18} aria-hidden="true" />
+              <div>
+                <h3>{copy.providerSettings}</h3>
+                <p>{providerConfigured ? copy.providerConfigured : copy.providerMissing}</p>
+              </div>
+            </div>
+            <label className="setting-group">
+              <span className="setting-label">{copy.providerBaseUrl}</span>
+              <input
+                className="setting-input"
+                placeholder={copy.providerBaseUrlPlaceholder}
+                type="url"
+                value={providerBaseUrl}
+                onChange={(event) => setProviderBaseUrl(event.target.value)}
+              />
+            </label>
+            <label className="setting-group">
+              <span className="setting-label">{copy.providerModel}</span>
+              <input
+                className="setting-input"
+                placeholder={copy.providerModelPlaceholder}
+                type="text"
+                value={providerModel}
+                onChange={(event) => setProviderModel(event.target.value)}
+              />
+            </label>
+            <label className="setting-group">
+              <span className="setting-label">{copy.providerApiKey}</span>
+              <input
+                autoComplete="off"
+                className="setting-input"
+                placeholder={copy.providerApiKeyPlaceholder}
+                type="password"
+                value={providerApiKey}
+                onChange={(event) => setProviderApiKey(event.target.value)}
+              />
+            </label>
+            <p className="settings-note">{copy.providerApiKeyHint}</p>
+            <div className="settings-actions">
+              <button
+                className="tool-button"
+                type="button"
+                disabled={providerStatus === 'saving' || providerStatus === 'testing'}
+                onClick={() => void handleSaveProviderConfig()}
+              >
+                <Settings size={16} aria-hidden="true" />
+                {providerStatus === 'saving' ? copy.saving : copy.saveProvider}
+              </button>
+              <button
+                className="primary-button is-compact"
+                type="button"
+                disabled={providerStatus === 'saving' || providerStatus === 'testing'}
+                onClick={() => void handleTestProviderConnection()}
+              >
+                {providerStatus === 'testing' ? <RefreshCw className="spin-icon" size={16} aria-hidden="true" /> : <Wifi size={16} aria-hidden="true" />}
+                {copy.providerTest}
+              </button>
+            </div>
+            {providerMessage ? (
+              <p className={providerStatus === 'failed' ? 'agent-error' : 'settings-success'}>{providerMessage}</p>
+            ) : null}
+          </section>
         </DialogShell>
       ) : null}
       {tooltip ? (

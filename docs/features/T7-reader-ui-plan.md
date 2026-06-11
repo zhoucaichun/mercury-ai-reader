@@ -11,7 +11,7 @@ T7 负责 Mercury 的阅读体验相关工作：
 - Summary、Translation、Export、Usage 等入口预留
 - 每周集成后的交互体验审查
 
-在真实 Feed、Sync、本地存储和 Reader Pipeline 模块完全接入之前，本模块需要先支持使用 mock 数据开发和演示。
+在真实 Feed、Sync、本地存储和 Reader Pipeline 模块完全接入之前，本模块可以先使用同接口适配器开发和演示。
 
 当前第 1 周静态原型见：
 
@@ -19,7 +19,7 @@ T7 负责 Mercury 的阅读体验相关工作：
 
 Week 2 React 实现已经迁移到 `src/features/reader/` 读取入口，并通过
 `Week2ReaderDataPort` 获取 `listFeeds / listArticles / getArticleContent`。在
-T2 / T5 的真实存储和同步实现合并前，T7 使用同接口 mock adapter；后续替换
+T2 / T5 的真实存储和同步实现合并前，T7 使用同接口临时 adapter；后续替换
 adapter 时不改变阅读器 UI 的组件边界。
 
 ## 2. 用户流程
@@ -77,7 +77,7 @@ MVP 阅读流程如下：
 - 导出 Markdown
 - 阅读设置
 
-在 T10 和 T11 尚未接入前，按钮可以是禁用状态或 mock 状态，但位置和命名应保持稳定。
+在 T10 和 T11 尚未接入前，按钮可以是禁用状态，但位置和命名应保持稳定。
 
 ### 3.4 Summary Agent 结果区
 
@@ -141,7 +141,7 @@ src/features/reader/
 ```
 
 当前 Week 2 最小实现先由 `src/features/reader/index.ts` 导出
-`mockWeek2ReaderDataPort`，`src/app/App.tsx` 通过该端口展示 Feed、Article 和
+`Week2ReaderDataPort`，`src/app/App.tsx` 通过该端口展示 Feed、Article 和
 ArticleContent。后续如果继续拆组件，应继续保留在 `src/features/reader/`
 目录下。
 
@@ -197,7 +197,7 @@ T7 MVP 完成时应满足：
 
 - 能看到文章列表。
 - 用户可以打开文章详情阅读页。
-- 能从 mock 数据或真实数据展示清洗后的正文。
+- 能从临时数据或真实数据展示清洗后的正文。
 - 加载、空状态和错误状态有明确处理。
 - 至少两个阅读设置可以工作。
 - Summary、Translation、Export 入口位置明确。
@@ -209,12 +209,16 @@ T7 MVP 完成时应满足：
 `src/styles/global.css` 中完成 Week 3 Reader UI 联调与可用性整改：
 
 - 接入 Summary、Translation、Usage、Markdown Export 的前端入口，并通过
-  `src/features/reader/week3AgentUiPort.ts` 使用 mock provider fallback 打通
-  Week 3 UI 调用链路。
+  `src/features/reader/week3AgentUiPort.ts` 读取本机 Provider 配置创建真实
+  OpenAI-compatible Provider。
 - Summary / Translation 结果区支持运行状态、错误提示、重新生成、复制和清空。
 - Usage 面板支持展示调用次数、成功 / 失败数、token 汇总和最近调用记录。
 - Markdown Export 会导出当前文章正文，并包含已有摘要和翻译结果。
 - 阅读设置和使用说明从 AI 面板中移出，改为应用级弹窗，避免用户在 AI 面板里寻找基础设置。
+- 阅读设置弹窗新增模型服务配置区，支持填写 Base URL、Model、API Key，保存后可测试连接。
+- API Key 只保存在当前设备的 `localStorage`，键名为
+  `mercury.reader.llmProviderConfig`；仓库内的示例配置只允许使用
+  `apiKeyEnv` 或 `<your-api-key>` 占位符。
 - 订阅栏和文章列表栏支持独立收起 / 展开；收起后保留窄条和书签式展开按钮。
 - AI 面板固定在阅读器正文上方，宽度跟随阅读器内容区，高度可由用户纵向拖动调整。
 - 阅读正文、图片、表格、代码块和链接增加溢出保护，避免横向滚动和文字遮盖。
@@ -232,6 +236,10 @@ npm test
 
 当前说明：
 
-- AI 输出仍使用 mock fallback，用于联调 UI、usage 记录和导出流程。
+- 用户未配置模型服务时，Summary / Translation 会提示先到阅读设置中填写
+  Base URL、Model 和 API Key，不会显示固定样例结果。
+- 如果不走界面输入，也可以在本机环境变量中放置 key，例如
+  `SCHOOL_LLM_API_KEY`，再由 T9 Provider 配置通过 `apiKeyEnv` 读取；真实 key
+  不得写入代码、文档或提交到 GitHub。
 - Electron 中如遇 `better-sqlite3` ABI 不匹配，会降级到 JSON fallback storage；
   该提示不影响本轮 Reader UI 交互验证。
