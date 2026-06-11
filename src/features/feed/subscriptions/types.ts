@@ -1,7 +1,7 @@
 export type ISODateString = string;
 
 export type Week2SubscriptionStatus = 'active' | 'disabled' | 'error';
-export type Week2SubscriptionSource = 'manual' | 'opml' | 'mock';
+export type Week2SubscriptionSource = 'manual' | 'opml';
 
 export interface Week2Subscription {
   id: string;

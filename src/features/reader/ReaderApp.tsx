@@ -421,7 +421,9 @@ export function ReaderApp() {
       applySyncPayload(payload);
     } catch (error) {
       setSyncStatus('failed');
-      setSyncMessage(error instanceof Error ? error.message : 'OPML import failed.');
+      const message = error instanceof Error ? error.message : 'OPML import failed.';
+      setSyncMessage(message);
+      setOpmlSummary({ importedCount: 0, skippedCount: 1, messages: [message] });
     }
   }
 

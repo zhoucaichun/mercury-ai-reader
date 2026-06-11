@@ -1,9 +1,7 @@
 import { normalizeFeedUrl, parseOpmlText } from '../opml/index';
-import { mockActiveSubscriptions } from './mockSubscriptions';
 import type { SubscriptionSaveResult, Week2Subscription, Week2SubscriptionProvider } from './types';
 
 export type { SubscriptionSaveResult, Week2Subscription, Week2SubscriptionProvider } from './types';
-export { mockActiveSubscriptions } from './mockSubscriptions';
 
 export type CreateWeek2SubscriptionProviderOptions = {
   initialSubscriptions?: Week2Subscription[];
@@ -12,7 +10,7 @@ export type CreateWeek2SubscriptionProviderOptions = {
 export function createWeek2SubscriptionProvider(
   options: CreateWeek2SubscriptionProviderOptions = {}
 ): Week2SubscriptionProvider {
-  const store = new InMemorySubscriptionStore(options.initialSubscriptions ?? mockActiveSubscriptions);
+  const store = new InMemorySubscriptionStore(options.initialSubscriptions ?? []);
 
   return {
     listActiveSubscriptions: () => store.listActiveSubscriptions()

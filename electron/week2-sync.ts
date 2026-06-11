@@ -228,31 +228,53 @@ export async function runWeek2Sync(feedUrls?: string[]): Promise<Week2FrontendSy
 
 export async function importOpmlAndSync(opmlText: string): Promise<Week2FrontendSyncPayload> {
   const parsed = parseOpmlText(opmlText);
-  const feedUrls = parsed.subscriptions.map((subscription) => subscription.feedUrl);
+  const parsedFeedUrls = parsed.subscriptions.map((subscription) => subscription.feedUrl);
 
-  if (feedUrls.length === 0) {
+  if (parsedFeedUrls.length === 0) {
     throw new Error('The OPML file did not contain any valid http/https Feed URL.');
   }
 
-  await getStorage().saveFeeds(
-    parsed.subscriptions.map((subscription) => ({
-      id: 'auto',
-      title: subscription.title,
-      feedUrl: subscription.feedUrl,
-      siteUrl: subscription.siteUrl,
-      unreadCount: 0,
-      status: 'ready',
-      lastSyncedAt: undefined,
-      isEnabled: true
-    }))
-  );
+  // Build a set of existing feed URLs (lowercased) to detect duplicates across imports
+  const storage = getStorage();
+  const existingFeeds = await storage.listFeeds();
+  const existingFeedUrls = new Set(existingFeeds.map((feed) => (feed.feedUrl ?? '').toLowerCase()));
+
+  const importableSubscriptions: Week2Subscription[] = [];
+  const skippedMessages: string[] = parsed.issues.map((issue) => issue.message);
+
+  for (const subscription of parsed.subscriptions) {
+    const dedupeKey = (subscription.feedUrl ?? '').toLowerCase();
+
+    if (existingFeedUrls.has(dedupeKey)) {
+      skippedMessages.push(`Skipped duplicate subscription "${subscription.title}".`);
+      continue;
+    }
+
+    existingFeedUrls.add(dedupeKey);
+    importableSubscriptions.push(subscription);
+  }
+
+  if (importableSubscriptions.length > 0) {
+    await storage.saveFeeds(
+      importableSubscriptions.map((subscription) => ({
+        id: 'auto',
+        title: subscription.title,
+        feedUrl: subscription.feedUrl,
+        siteUrl: subscription.siteUrl,
+        unreadCount: 0,
+        status: 'ready',
+        lastSyncedAt: undefined,
+        isEnabled: true
+      }))
+    );
+  }
 
   const subscriptions = await listActiveStoredSubscriptions();
 
   const syncService = createSyncService({
     subscriptionProvider: createStaticSubscriptionProvider(subscriptions),
     feedParser: week2FeedParser,
-    storage: getStorage()
+    storage: storage
   });
 
   const result = await syncService.syncAll();
@@ -260,9 +282,9 @@ export async function importOpmlAndSync(opmlText: string): Promise<Week2Frontend
     result,
     feedUrls: subscriptions.map((subscription) => subscription.feedUrl),
     opml: {
-      importedCount: parsed.subscriptions.length,
-      skippedCount: parsed.issues.length,
-      messages: parsed.issues.map((issue) => issue.message)
+      importedCount: importableSubscriptions.length,
+      skippedCount: skippedMessages.length,
+      messages: skippedMessages
     }
   });
 }
