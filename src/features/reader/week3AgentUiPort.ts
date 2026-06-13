@@ -1,5 +1,4 @@
 import { exportCurrentArticle as createExportFile } from '../export';
-import { createLLMProvider } from '../agent/providers/providerFactory';
 import type { Week3AgentArticleInput } from '../agent/runtime/types';
 import type {
   Week3LLMConnectionTestResult,
@@ -87,6 +86,8 @@ export interface Week3MarkdownExportFile {
 export interface Week3AgentUiPort {
   generateSummary(request: Week3SummaryRequest): Promise<Week3SummaryResult>;
   translateArticle(request: Week3TranslationRequest): Promise<Week3TranslationResult>;
+  /** Translate a single text string. Used for per-paragraph and inline translation. */
+  translateText?(text: string, targetLanguage: string, sourceLanguage?: string): Promise<string>;
   testConnection?(): Promise<Week3LLMConnectionTestResult>;
   listUsageEvents?(): Promise<Week3LLMUsageEvent[]>;
   getUsageSummary?(): Promise<Week3LLMUsageSummary>;
@@ -235,6 +236,35 @@ export function createBrowserWeek3AgentUiPort(
       };
     },
 
+    async translateText(text: string, targetLanguage: string, sourceLanguage?: string) {
+      const response = await callLLMWithUsage(
+        provider,
+        {
+          purpose: 'translation',
+          model: provider.config.model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a translation assistant. Translate the given text accurately. Return ONLY the translated text, no explanations or extra formatting.'
+            },
+            {
+              role: 'user',
+              content: `Translate the following from ${sourceLanguage ?? 'auto-detect'} to ${targetLanguage}:\n\n${text}`
+            }
+          ],
+          metadata: {
+            taskId: `inline-translation-${Date.now()}`,
+            articleId: '',
+            agentType: 'translation',
+            sourceLanguage,
+            targetLanguage
+          }
+        },
+        usageStore
+      );
+      return response.content;
+    },
+
     async listUsageEvents() {
       return usageStore.list();
     },
@@ -347,6 +377,17 @@ function createElectronAgentUiPort(usageStore: LLMUsageEventStore): Week3AgentUi
         config: toIpcProviderConfig(config),
         request
       });
+    },
+
+    async translateText(text: string, targetLanguage: string, sourceLanguage?: string) {
+      const config = loadRequiredReaderConfig();
+      const result = await window.mercury!.translateText({
+        config: toIpcProviderConfig(config),
+        text,
+        targetLanguage,
+        sourceLanguage
+      });
+      return result.translatedText;
     },
 
     async testConnection() {

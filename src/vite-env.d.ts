@@ -66,6 +66,12 @@ type MercuryRuntimeInfo = {
     config: Required<ReaderLLMProviderConfigInput>;
     request: Week3TranslationRequest;
   }): Promise<Week3TranslationResult>;
+  translateText(input: {
+    config: Required<ReaderLLMProviderConfigInput>;
+    text: string;
+    targetLanguage: string;
+    sourceLanguage?: string;
+  }): Promise<{ translatedText: string }>;
   listUsageEvents(): Promise<Week3LLMUsageEvent[]>;
   getUsageSummary(): Promise<Week3LLMUsageSummary>;
 };

@@ -236,6 +236,45 @@ export async function translateWeek3Article(
   };
 }
 
+export interface Week3TranslateTextInput {
+  config: { baseUrl: string; model: string; apiKey: string };
+  text: string;
+  targetLanguage: string;
+  sourceLanguage?: string;
+}
+
+export async function translateWeek3Text(
+  input: Week3TranslateTextInput
+): Promise<{ translatedText: string }> {
+  const provider = createProvider(input.config);
+  const response = await callLLMWithUsage(
+    provider,
+    {
+      purpose: 'translation',
+      model: provider.config.model,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a translation assistant. Translate the given text accurately. Return ONLY the translated text, no explanations or extra formatting.'
+        },
+        {
+          role: 'user',
+          content: `Translate the following from ${input.sourceLanguage ?? 'auto-detect'} to ${input.targetLanguage}:\n\n${input.text}`
+        }
+      ],
+      metadata: {
+        taskId: `inline-translation-${Date.now()}-${randomSuffix()}`,
+        articleId: '',
+        agentType: 'translation',
+        sourceLanguage: input.sourceLanguage,
+        targetLanguage: input.targetLanguage
+      }
+    },
+    usageStore
+  );
+  return { translatedText: response.content };
+}
+
 export async function listWeek3UsageEvents(): Promise<Week3LLMUsageEvent[]> {
   return usageStore.list();
 }

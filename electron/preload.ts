@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld('mercury', {
     ipcRenderer.invoke('week3:test-provider', config),
   generateSummary: (input: unknown) => ipcRenderer.invoke('week3:generate-summary', input),
   translateArticle: (input: unknown) => ipcRenderer.invoke('week3:translate-article', input),
+  translateText: (input: { config: { baseUrl: string; model: string; apiKey: string }; text: string; targetLanguage: string; sourceLanguage?: string }) =>
+    ipcRenderer.invoke('week3:translate-text', input),
   listUsageEvents: () => ipcRenderer.invoke('week3:list-usage-events'),
   getUsageSummary: () => ipcRenderer.invoke('week3:get-usage-summary')
 });

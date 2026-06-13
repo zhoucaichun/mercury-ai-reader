@@ -12,7 +12,8 @@ import {
   getWeek3UsageSummary,
   listWeek3UsageEvents,
   testWeek3ProviderConnection,
-  translateWeek3Article
+  translateWeek3Article,
+  translateWeek3Text
 } from './week3-ai.js';
 
 const devServerUrl = 'http://127.0.0.1:5173';
@@ -24,7 +25,7 @@ function createMainWindow() {
     height: 860,
     minWidth: 960,
     minHeight: 680,
-    title: 'Mercury AI Reader',
+    title: 'Prism Reader',
     backgroundColor: '#f7f5ef',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -60,6 +61,7 @@ ipcMain.handle('week2:update-feed-subscription', (_event, input) => updateFeedSu
 ipcMain.handle('week3:test-provider', (_event, config) => testWeek3ProviderConnection(config));
 ipcMain.handle('week3:generate-summary', (_event, input) => generateWeek3Summary(input));
 ipcMain.handle('week3:translate-article', (_event, input) => translateWeek3Article(input));
+ipcMain.handle('week3:translate-text', (_event, input) => translateWeek3Text(input));
 ipcMain.handle('week3:list-usage-events', () => listWeek3UsageEvents());
 ipcMain.handle('week3:get-usage-summary', () => getWeek3UsageSummary());
 
