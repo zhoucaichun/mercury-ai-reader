@@ -1,5 +1,4 @@
 import { exportCurrentArticle as createExportFile } from '../export';
-import { createLLMProvider } from '../agent/providers/providerFactory';
 import type { Week3AgentArticleInput } from '../agent/runtime/types';
 import type {
   Week3LLMConnectionTestResult,
@@ -86,9 +85,18 @@ export interface Week3MarkdownExportFile {
   markdown: string;
 }
 
+export interface Week3ProviderConfigStore {
+  loadProviderConfig?(): Week3LLMProviderConfig | null;
+  saveProviderConfig?(input: ReaderLLMProviderConfigInput): Week3LLMProviderConfig;
+  listProviderProfiles?(): Week3LLMProviderConfig[];
+  activateProviderProfile?(profile: Week3LLMProviderConfig): Week3LLMProviderConfig;
+}
+
 export interface Week3AgentUiPort {
   generateSummary(request: Week3SummaryRequest): Promise<Week3SummaryResult>;
   translateArticle(request: Week3TranslationRequest): Promise<Week3TranslationResult>;
+  /** Translate a single text string. Used for per-paragraph and inline translation. */
+  translateText?(text: string, targetLanguage: string, sourceLanguage?: string): Promise<string>;
   testConnection?(): Promise<Week3LLMConnectionTestResult>;
   listUsageEvents?(): Promise<Week3LLMUsageEvent[]>;
   getUsageSummary?(): Promise<Week3LLMUsageSummary>;
@@ -237,6 +245,35 @@ export function createBrowserWeek3AgentUiPort(
       };
     },
 
+    async translateText(text: string, targetLanguage: string, sourceLanguage?: string) {
+      const response = await callLLMWithUsage(
+        provider,
+        {
+          purpose: 'translation',
+          model: provider.config.model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a translation assistant. Translate the given text accurately. Return ONLY the translated text, no explanations or extra formatting.'
+            },
+            {
+              role: 'user',
+              content: `Translate the following from ${sourceLanguage ?? 'auto-detect'} to ${targetLanguage}:\n\n${text}`
+            }
+          ],
+          metadata: {
+            taskId: `inline-translation-${Date.now()}`,
+            articleId: '',
+            agentType: 'translation',
+            sourceLanguage,
+            targetLanguage
+          }
+        },
+        usageStore
+      );
+      return response.content;
+    },
+
     async listUsageEvents() {
       return usageStore.list();
     },
@@ -263,6 +300,11 @@ export function createBrowserWeek3AgentUiPort(
 }
 
 export function loadReaderLLMProviderConfig(): Week3LLMProviderConfig | null {
+  const bridgeConfig = globalThis.window?.mercury?.loadProviderConfig?.();
+  if (bridgeConfig) {
+    return normalizeProviderConfig(bridgeConfig);
+  }
+
   if (typeof globalThis.localStorage === 'undefined') {
     return null;
   }
@@ -299,6 +341,11 @@ export function loadReaderLLMProviderConfig(): Week3LLMProviderConfig | null {
 }
 
 export function saveReaderLLMProviderConfig(input: ReaderLLMProviderConfigInput): Week3LLMProviderConfig {
+  const bridgeConfig = globalThis.window?.mercury?.saveProviderConfig?.(input);
+  if (bridgeConfig) {
+    return normalizeProviderConfig(bridgeConfig)!;
+  }
+
   const current = loadReaderLLMProviderConfig();
   const apiKey = input.apiKey?.trim() || current?.apiKey;
 
@@ -331,6 +378,13 @@ export function saveReaderLLMProviderConfig(input: ReaderLLMProviderConfigInput)
 }
 
 export function loadReaderLLMProviderProfiles(): Week3LLMProviderConfig[] {
+  const bridgeProfiles = globalThis.window?.mercury?.listProviderProfiles?.();
+  if (bridgeProfiles) {
+    return bridgeProfiles
+      .map((profile) => normalizeProviderConfig(profile))
+      .filter((profile): profile is Week3LLMProviderConfig => Boolean(profile));
+  }
+
   if (typeof globalThis.localStorage === 'undefined') {
     return [];
   }
@@ -371,9 +425,36 @@ export function loadReaderLLMProviderProfiles(): Week3LLMProviderConfig[] {
 }
 
 export function activateReaderLLMProviderProfile(profile: Week3LLMProviderConfig): Week3LLMProviderConfig {
+  const bridgeConfig = globalThis.window?.mercury?.activateProviderProfile?.(profile);
+  if (bridgeConfig) {
+    return normalizeProviderConfig(bridgeConfig)!;
+  }
+
   globalThis.localStorage?.setItem(READER_LLM_PROVIDER_STORAGE_KEY, JSON.stringify(profile));
   saveReaderLLMProviderProfile(profile);
   return profile;
+}
+
+function normalizeProviderConfig(input: Partial<Week3LLMProviderConfig> | null | undefined): Week3LLMProviderConfig | null {
+  if (
+    input?.kind !== 'openai-compatible' ||
+    !isNonEmptyString(input.baseUrl) ||
+    !isNonEmptyString(input.model) ||
+    !isNonEmptyString(input.apiKey)
+  ) {
+    return null;
+  }
+
+  return {
+    providerId: input.providerId || 'school',
+    providerName: input.providerName || 'School Model',
+    kind: 'openai-compatible',
+    baseUrl: input.baseUrl.trim(),
+    model: input.model.trim(),
+    apiKey: input.apiKey.trim(),
+    enabled: true,
+    timeoutMs: input.timeoutMs ?? 30000
+  };
 }
 
 function saveReaderLLMProviderProfile(config: Week3LLMProviderConfig): void {
@@ -410,6 +491,17 @@ function createElectronAgentUiPort(usageStore: LLMUsageEventStore): Week3AgentUi
         config: toIpcProviderConfig(config),
         request
       });
+    },
+
+    async translateText(text: string, targetLanguage: string, sourceLanguage?: string) {
+      const config = loadRequiredReaderConfig();
+      const result = await window.mercury!.translateText({
+        config: toIpcProviderConfig(config),
+        text,
+        targetLanguage,
+        sourceLanguage
+      });
+      return result.translatedText;
     },
 
     async testConnection() {

@@ -17,10 +17,11 @@ import { week2FeedParser } from '../src/features/feed/parser/index.js';
 import { createReaderPipeline } from '../src/features/reader/pipeline/index.js';
 import { createWeek2StoragePort, initDatabase } from '../src/core/database/index.js';
 import { createJsonWeek2StoragePort } from './json-week2-storage.js';
+import fs from 'node:fs/promises';
 
 const DEFAULT_FEED_URLS = [
   'https://www.ruanyifeng.com/blog/atom.xml',
-  'https://css-tricks.com/feed/'
+  'https://blog.mozilla.org/en/feed/'
 ] as const;
 
 export type Week2FrontendSyncPayload = {
@@ -287,6 +288,11 @@ export async function importOpmlAndSync(opmlText: string): Promise<Week2Frontend
       messages: skippedMessages
     }
   });
+}
+
+export async function importOpmlFileAndSync(filePath: string): Promise<Week2FrontendSyncPayload> {
+  const opmlText = await fs.readFile(filePath, 'utf8');
+  return importOpmlAndSync(opmlText);
 }
 
 export async function previewOpmlImport(opmlText: string): Promise<Week2OpmlPreviewPayload> {

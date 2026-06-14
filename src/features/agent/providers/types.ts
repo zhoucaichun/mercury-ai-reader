@@ -68,6 +68,10 @@ export interface Week3LLMConnectionTestResult {
 export interface Week3LLMProvider {
   readonly config: RedactedWeek3LLMProviderConfig;
   chat(request: Week3LLMChatRequest): Promise<Week3LLMChatResponse>;
+  streamChat?(
+    request: Week3LLMChatRequest,
+    onDelta: (delta: string) => void | Promise<void>
+  ): Promise<Week3LLMChatResponse>;
   testConnection?(signal?: AbortSignal): Promise<Week3LLMConnectionTestResult>;
 }
 

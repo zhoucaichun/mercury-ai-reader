@@ -101,6 +101,38 @@ export async function callLLMWithUsage(
   }
 }
 
+export async function streamLLMWithUsage(
+  provider: Week3LLMProvider,
+  request: Week3LLMChatRequest,
+  onDelta: (delta: string) => void | Promise<void>,
+  usageStore?: LLMUsageEventStore,
+): Promise<Week3LLMChatResponse> {
+  if (!provider.streamChat) {
+    return callLLMWithUsage(provider, request, usageStore);
+  }
+
+  const startedAt = new Date();
+
+  try {
+    const response = await provider.streamChat(request, onDelta);
+    await usageStore?.append(
+      createUsageEventFromResponse(request, response, startedAt),
+    );
+    return response;
+  } catch (error) {
+    await usageStore?.append(
+      createFailedUsageEvent({
+        request,
+        providerConfig: provider.config,
+        startedAt,
+        error,
+        estimatedPromptTokens: estimateTokensFromMessages(request.messages),
+      }),
+    );
+    throw error;
+  }
+}
+
 export async function testLLMConnectionWithUsage(
   provider: Week3LLMProvider,
   usageStore?: LLMUsageEventStore,

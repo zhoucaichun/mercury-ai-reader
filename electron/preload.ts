@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('mercury', {
   },
   runWeek2Sync: (feedUrls?: string[]) => ipcRenderer.invoke('week2:sync', feedUrls),
   importOpmlText: (opmlText: string) => ipcRenderer.invoke('week2:import-opml', opmlText),
+  importOpmlFile: (filePath: string) => ipcRenderer.invoke('week2:import-opml-file', filePath),
   previewOpmlText: (opmlText: string) => ipcRenderer.invoke('week2:preview-opml', opmlText),
   updateArticleState: (input: { articleId: string; isRead?: boolean; isStarred?: boolean }) =>
     ipcRenderer.invoke('week2:update-article-state', input),
@@ -18,6 +19,13 @@ contextBridge.exposeInMainWorld('mercury', {
     ipcRenderer.invoke('week3:test-provider', config),
   generateSummary: (input: unknown) => ipcRenderer.invoke('week3:generate-summary', input),
   translateArticle: (input: unknown) => ipcRenderer.invoke('week3:translate-article', input),
+  translateText: (input: { config: { baseUrl: string; model: string; apiKey: string }; text: string; targetLanguage: string; sourceLanguage?: string }) =>
+    ipcRenderer.invoke('week3:translate-text', input),
   listUsageEvents: () => ipcRenderer.invoke('week3:list-usage-events'),
-  getUsageSummary: () => ipcRenderer.invoke('week3:get-usage-summary')
+  getUsageSummary: () => ipcRenderer.invoke('week3:get-usage-summary'),
+  loadProviderConfig: () => ipcRenderer.sendSync('week3:load-provider-config-sync'),
+  saveProviderConfig: (input: { baseUrl: string; model: string; apiKey?: string; timeoutMs?: number }) =>
+    ipcRenderer.sendSync('week3:save-provider-config-sync', input),
+  listProviderProfiles: () => ipcRenderer.sendSync('week3:list-provider-profiles-sync'),
+  activateProviderProfile: (profile: unknown) => ipcRenderer.sendSync('week3:activate-provider-profile-sync', profile)
 });

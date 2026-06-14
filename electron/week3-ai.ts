@@ -6,6 +6,7 @@ import type {
 import {
   callLLMWithUsage,
   InMemoryLLMUsageEventStore,
+  streamLLMWithUsage,
   summarizeUsage,
   testLLMConnectionWithUsage
 } from '../src/features/usage/usage.js';
@@ -110,7 +111,7 @@ export async function generateWeek3Summary(
   const provider = createProvider(input.config);
   const taskId = createTaskId('summary', input.request.articleId, input.request.regenerate);
 
-  const response = await callLLMWithUsage(
+  const response = await callWeek3LLM(
     provider,
     {
       purpose: 'summary',
@@ -146,8 +147,7 @@ export async function generateWeek3Summary(
         targetLanguage: input.request.targetLanguage,
         detailLevel: input.request.detailLevel
       }
-    },
-    usageStore
+    }
   );
 
   const createdAt = new Date().toISOString();
@@ -177,7 +177,7 @@ export async function translateWeek3Article(
   const translatedChunks: string[] = [];
 
   for (const [index, chunk] of chunks.entries()) {
-    const response = await callLLMWithUsage(
+    const response = await callWeek3LLM(
       provider,
       {
         purpose: 'translation',
@@ -213,8 +213,7 @@ export async function translateWeek3Article(
           chunkIndex: index,
           chunkCount: chunks.length
         }
-      },
-      usageStore
+      }
     );
     translatedChunks.push(response.content.trim());
   }
@@ -236,6 +235,44 @@ export async function translateWeek3Article(
   };
 }
 
+export interface Week3TranslateTextInput {
+  config: { baseUrl: string; model: string; apiKey: string };
+  text: string;
+  targetLanguage: string;
+  sourceLanguage?: string;
+}
+
+export async function translateWeek3Text(
+  input: Week3TranslateTextInput
+): Promise<{ translatedText: string }> {
+  const provider = createProvider(input.config);
+  const request = {
+    purpose: 'translation' as const,
+    model: provider.config.model,
+    messages: [
+      {
+        role: 'system' as const,
+        content: 'You are a translation assistant. Translate the given text accurately. Return ONLY the translated text, no explanations or extra formatting.'
+      },
+      {
+        role: 'user' as const,
+        content: `Translate the following from ${input.sourceLanguage ?? 'auto-detect'} to ${input.targetLanguage}:\n\n${input.text}`
+      }
+    ],
+    metadata: {
+      taskId: `inline-translation-${Date.now()}-${randomSuffix()}`,
+      articleId: '',
+      agentType: 'translation',
+      sourceLanguage: input.sourceLanguage,
+      targetLanguage: input.targetLanguage
+    }
+  };
+
+  const response = await callWeek3LLM(provider, request);
+
+  return { translatedText: response.content };
+}
+
 export async function listWeek3UsageEvents(): Promise<Week3LLMUsageEvent[]> {
   return usageStore.list();
 }
@@ -253,10 +290,19 @@ function createProvider(input: Week3AiIpcInput<unknown>['config']) {
     model: input.model.trim(),
     apiKey: input.apiKey.trim(),
     enabled: true,
-    timeoutMs: 60000
+    timeoutMs: 120000
   };
 
   return createLLMProvider(config);
+}
+
+function callWeek3LLM(
+  provider: ReturnType<typeof createProvider>,
+  request: Parameters<typeof callLLMWithUsage>[1]
+) {
+  return provider.streamChat
+    ? streamLLMWithUsage(provider, request, () => undefined, usageStore)
+    : callLLMWithUsage(provider, request, usageStore);
 }
 
 function splitMarkdownIntoChunks(markdown: string, charLimit: number): string[] {

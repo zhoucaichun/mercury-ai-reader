@@ -4,6 +4,7 @@ import type { Week2Article, Week2ArticleContent, Week2Feed } from './core/types'
 import type { Week2Subscription } from './features/feed/sync/types';
 import type { Week2SyncAllResult } from './features/feed/sync/types';
 import type { Week3LLMConnectionTestResult } from './features/agent/providers/types';
+import type { Week3LLMProviderConfig } from './features/agent/providers/types';
 import type { Week3LLMUsageEvent, Week3LLMUsageSummary } from './features/usage/types';
 import type {
   ReaderLLMProviderConfigInput,
@@ -46,6 +47,7 @@ type MercuryRuntimeInfo = {
   };
   runWeek2Sync(feedUrls?: string[]): Promise<MercuryWeek2SyncPayload>;
   importOpmlText(opmlText: string): Promise<MercuryWeek2SyncPayload>;
+  importOpmlFile?(filePath: string): Promise<MercuryWeek2SyncPayload>;
   previewOpmlText(opmlText: string): Promise<MercuryWeek2OpmlPreviewPayload>;
   updateArticleState(input: {
     articleId: string;
@@ -66,8 +68,18 @@ type MercuryRuntimeInfo = {
     config: Required<ReaderLLMProviderConfigInput>;
     request: Week3TranslationRequest;
   }): Promise<Week3TranslationResult>;
+  translateText(input: {
+    config: Required<ReaderLLMProviderConfigInput>;
+    text: string;
+    targetLanguage: string;
+    sourceLanguage?: string;
+  }): Promise<{ translatedText: string }>;
   listUsageEvents(): Promise<Week3LLMUsageEvent[]>;
   getUsageSummary(): Promise<Week3LLMUsageSummary>;
+  loadProviderConfig?(): Week3LLMProviderConfig | null;
+  saveProviderConfig?(input: ReaderLLMProviderConfigInput): Week3LLMProviderConfig;
+  listProviderProfiles?(): Week3LLMProviderConfig[];
+  activateProviderProfile?(profile: Week3LLMProviderConfig): Week3LLMProviderConfig;
 };
 
 declare global {

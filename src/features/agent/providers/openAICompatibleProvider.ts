@@ -181,6 +181,115 @@ export class OpenAICompatibleProvider implements LLMProvider {
     }
   }
 
+  async streamChat(
+    request: LLMChatRequest,
+    onDelta: (delta: string) => void | Promise<void>,
+  ): Promise<LLMChatResponse> {
+    const startedAt = Date.now();
+    const timeoutState = createTimeoutSignal(
+      request.signal,
+      this.resolvedConfig.timeoutMs,
+    );
+    let content = "";
+
+    try {
+      const response = await this.fetcher(
+        chatCompletionsUrl(this.resolvedConfig.baseUrl),
+        {
+          method: "POST",
+          headers: this.buildHeaders(),
+          body: JSON.stringify({
+            model: request.model ?? this.resolvedConfig.model,
+            messages: request.messages,
+            temperature: request.temperature,
+            max_tokens: request.maxTokens,
+            stream: true,
+          }),
+          signal: timeoutState.signal,
+        },
+      );
+
+      if (!response.ok) {
+        const responseJson = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+        throw toProviderError(response, responseJson);
+      }
+
+      if (!response.body) {
+        return this.chat(request);
+      }
+
+      const decoder = new TextDecoder();
+      const reader = response.body.getReader();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const payload = trimmed.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+
+          try {
+            const parsed = JSON.parse(payload) as {
+              choices?: Array<{ delta?: { content?: string } }>;
+            };
+            const delta = parsed.choices?.[0]?.delta?.content ?? "";
+            if (delta) {
+              content += delta;
+              await onDelta(delta);
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+
+      if (!content.trim()) {
+        throw new LLMProviderError("Provider returned an empty response.", {
+          code: "empty_response",
+          retryable: true,
+        });
+      }
+
+      return {
+        id: undefined,
+        providerId: this.resolvedConfig.providerId,
+        providerName: this.resolvedConfig.providerName,
+        model: request.model ?? this.resolvedConfig.model,
+        content,
+        usage: normalizeUsage(undefined, request.messages, content),
+        status: "succeeded",
+        latencyMs: Date.now() - startedAt,
+        raw: undefined,
+      };
+    } catch (error) {
+      if (error instanceof LLMProviderError) {
+        throw error;
+      }
+
+      if (timeoutState.didTimeout()) {
+        throw new LLMProviderError("Provider request timed out.", {
+          code: "timeout",
+          retryable: true,
+        });
+      }
+
+      throw new LLMProviderError(normalizeUnknownError(error), {
+        code: "provider_error",
+        retryable: true,
+        details: error,
+      });
+    } finally {
+      timeoutState.cleanup();
+    }
+  }
+
   private buildHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       "content-type": "application/json",
