@@ -1,8 +1,8 @@
 {
-  "name": "mercury-ai-reader",
+  "name": "prism-reader",
   "version": "0.1.0",
   "private": true,
-  "description": "Mercury local-first AI reader course project",
+  "description": "Prism Reader local-first AI reader course project",
   "type": "commonjs",
   "main": "dist-electron/electron/main.js",
   "scripts": {
@@ -27,8 +27,8 @@
     "smoke:translation:real": "npx tsx scripts/smoke-translation-real.ts"
   },
   "build": {
-    "appId": "edu.ecnu.mercury-ai-reader",
-    "productName": "Mercury AI Reader",
+    "appId": "edu.ecnu.prism-reader",
+    "productName": "Prism Reader",
     "directories": {
       "output": "release"
     },
