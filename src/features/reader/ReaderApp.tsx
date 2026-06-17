@@ -290,7 +290,7 @@ const uiCopy = {
         '在筛选下拉菜单中可按标签筛选文章，也可全局删除某类标签（需二次确认）。'
       ]},
       { title: '数据安全', items: [
-        'API Key 只保存在当前设备的本地浏览器存储中，不会上传到任何服务器。',
+        'API Key 只保存在当前设备；桌面端会加密保存，不会上传到任何服务器。',
         '所有阅读数据（进度、标注、笔记、标签）均存储在本地。'
       ]}
     ],
@@ -318,7 +318,7 @@ const uiCopy = {
     openElectron: '请在 Electron 应用中运行真实 Feed 同步。',
     provider: 'Provider',
     providerApiKey: 'API Key',
-    providerApiKeyHint: 'API Key 只保存在本机 localStorage，不会写入仓库。再次保存时如果留空，会沿用已保存的 key。',
+    providerApiKeyHint: 'API Key 只保存在本机；桌面端会加密保存，不会写入仓库或上传服务器。再次保存时如果留空，会沿用已保存的 key。',
     providerApiKeyPlaceholder: '粘贴 API key，保存后仅留在本机',
     providerBaseUrl: 'Base URL',
     providerBaseUrlPlaceholder: '例如 https://api.example.com/v1',
@@ -499,7 +499,7 @@ const uiCopy = {
         'Filter articles by tag in the dropdown. Delete a tag globally from all articles (with confirmation).'
       ]},
       { title: 'Data & Security', items: [
-        'API keys are stored only in local browser storage on this device and never uploaded.',
+        'API keys stay on this device; the desktop app stores them encrypted and never uploads them.',
         'All reading data (progress, annotations, notes, tags) is stored locally.'
       ]}
     ],
@@ -527,7 +527,7 @@ const uiCopy = {
     openElectron: 'Open the Electron app to run the real Feed sync chain.',
     provider: 'Provider',
     providerApiKey: 'API Key',
-    providerApiKeyHint: 'The API key is stored only in localStorage on this device. Leave it blank later to keep the saved key.',
+    providerApiKeyHint: 'The API key stays on this device; the desktop app stores it encrypted and never uploads it. Leave it blank later to keep the saved key.',
     providerApiKeyPlaceholder: 'Paste your API key; it stays on this device',
     providerBaseUrl: 'Base URL',
     providerBaseUrlPlaceholder: 'For example, https://api.example.com/v1',
