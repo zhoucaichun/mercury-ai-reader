@@ -128,7 +128,7 @@ export function buildTranslationChatRequest(
       {
         role: "system",
         content: [
-          "You are Mercury's article translation assistant.",
+          "You are Prism Reader's article translation assistant.",
           "Translate only from the provided article content.",
           "Preserve Markdown structure, headings, lists, links, and code blocks.",
           "Do not add commentary outside the translated Markdown.",

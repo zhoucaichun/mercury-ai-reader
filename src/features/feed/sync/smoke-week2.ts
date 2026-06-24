@@ -23,7 +23,7 @@ import { week2FeedParser } from '../parser/index.js';
 
 async function main() {
   console.log('='.repeat(60));
-  console.log('Mercury AI Reader - Week 2 Smoke Test (T5 Sync)');
+  console.log('Prism Reader - Week 2 Smoke Test (Feed Sync)');
   console.log('='.repeat(60));
   console.log();
 

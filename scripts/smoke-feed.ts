@@ -13,6 +13,7 @@ const defaultFeeds = [
 
 const feeds = process.argv.slice(2);
 const targets = feeds.length > 0 ? feeds : defaultFeeds;
+const minimumSuccessfulFeeds = feeds.length > 0 ? targets.length : Math.min(2, targets.length);
 const requiredArticleFields = [
   "title",
   "url",
@@ -23,6 +24,7 @@ const requiredArticleFields = [
 ] as const;
 
 let failed = false;
+let successCount = 0;
 
 async function main(): Promise<void> {
   for (const feedUrl of targets) {
@@ -56,6 +58,7 @@ async function main(): Promise<void> {
           `warnings=${parsed.warnings.length}`,
         ].join(" | "),
       );
+      successCount += 1;
     } catch (error) {
       failed = true;
 
@@ -67,8 +70,18 @@ async function main(): Promise<void> {
     }
   }
 
-  if (failed) {
+  if (successCount < minimumSuccessfulFeeds) {
+    console.error(
+      `FAIL | smoke-feed | only ${successCount}/${targets.length} feeds passed; expected at least ${minimumSuccessfulFeeds}.`,
+    );
     process.exitCode = 1;
+    return;
+  }
+
+  if (failed) {
+    console.warn(
+      `WARN | smoke-feed | ${successCount}/${targets.length} feeds passed. Some public feeds may be temporarily unreachable.`,
+    );
   }
 }
 

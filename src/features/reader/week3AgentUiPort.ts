@@ -141,7 +141,7 @@ export function createBrowserWeek3AgentUiPort(
             {
               role: 'system',
               content:
-                'You are Mercury AI Reader summary assistant. Return concise Markdown only, based on the article content.'
+                'You are Prism Reader summary assistant. Return concise Markdown only, based on the article content.'
             },
             {
               role: 'user',
@@ -202,7 +202,7 @@ export function createBrowserWeek3AgentUiPort(
             {
               role: 'system',
               content:
-                'You are Mercury AI Reader translation assistant. Preserve Markdown structure and return translated Markdown only.'
+                'You are Prism Reader translation assistant. Preserve Markdown structure and return translated Markdown only.'
             },
             {
               role: 'user',

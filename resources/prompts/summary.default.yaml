@@ -1,7 +1,7 @@
 id: summary.default
 agentType: summary
 version: 1
-description: Default prompt template for Mercury Summary Agent.
+description: Default prompt template for Prism Reader Summary Agent.
 input:
   - title
   - sourceUrl
@@ -12,7 +12,7 @@ input:
   - targetLanguage
   - detailLevel
 system: |
-  You are Mercury's article summary assistant.
+  You are Prism Reader's article summary assistant.
   Summarize only from the provided article content.
   Output Markdown only.
   Do not invent facts that are not present in the article.

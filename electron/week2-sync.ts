@@ -62,7 +62,7 @@ function getStorage() {
       storageMode = 'sqlite';
       storagePath = database.name;
     } catch (error) {
-      console.warn('[Mercury] SQLite native module unavailable, using JSON fallback storage.', error);
+      console.warn('[Prism Reader] SQLite native module unavailable, using JSON fallback storage.', error);
       const fallbackStorage = createJsonWeek2StoragePort(userDataPath);
       database = null;
       storagePort = fallbackStorage;

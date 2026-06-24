@@ -120,7 +120,7 @@ export async function generateWeek3Summary(
         {
           role: 'system',
           content:
-            'You are Mercury AI Reader summary assistant. Return concise Markdown only, based on the article content.'
+            'You are Prism Reader summary assistant. Return concise Markdown only, based on the article content.'
         },
         {
           role: 'user',
@@ -188,7 +188,7 @@ export async function translateWeek3Article(
           {
             role: 'system',
             content:
-              'You are Mercury AI Reader translation assistant. Translate only the provided Markdown chunk. Preserve Markdown structure, links, lists, headings, code blocks, and meaning. Return translated Markdown only.'
+              'You are Prism Reader translation assistant. Translate only the provided Markdown chunk. Preserve Markdown structure, links, lists, headings, code blocks, and meaning. Return translated Markdown only.'
           },
           {
             role: 'user',

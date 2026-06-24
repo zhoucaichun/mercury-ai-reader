@@ -12,7 +12,7 @@ export interface FeedFetchResult {
 }
 
 const DEFAULT_TIMEOUT_MS = 15_000;
-const DEFAULT_USER_AGENT = "MercuryAIReader/0.1 (+https://github.com/zhoukang/mercury-ai-reader)";
+const DEFAULT_USER_AGENT = "PrismReader/0.1 (+https://github.com/zhoucaichun/mercury-ai-reader)";
 
 export async function fetchFeedText(
   inputUrl: string,
