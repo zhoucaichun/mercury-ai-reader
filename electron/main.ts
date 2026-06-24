@@ -18,6 +18,7 @@ import {
 } from './week3-ai.js';
 import {
   activateProviderProfile,
+  deleteProviderProfile,
   listProviderProfiles,
   loadProviderConfig,
   saveProviderConfig
@@ -70,6 +71,24 @@ ipcMain.handle('week3:test-provider', (_event, config) => testWeek3ProviderConne
 ipcMain.handle('week3:generate-summary', (_event, input) => generateWeek3Summary(input));
 ipcMain.handle('week3:translate-article', (_event, input) => translateWeek3Article(input));
 ipcMain.handle('week3:translate-text', (_event, input) => translateWeek3Text(input));
+ipcMain.handle('week3:stream-summary', (event, input) => {
+  const streamId = typeof input?.streamId === 'string' ? input.streamId : `summary-${Date.now()}`;
+  return generateWeek3Summary(input, (delta) => {
+    event.sender.send('week3:stream-delta', { streamId, delta });
+  });
+});
+ipcMain.handle('week3:stream-translation', (event, input) => {
+  const streamId = typeof input?.streamId === 'string' ? input.streamId : `translation-${Date.now()}`;
+  return translateWeek3Article(input, (delta) => {
+    event.sender.send('week3:stream-delta', { streamId, delta });
+  });
+});
+ipcMain.handle('week3:stream-text-translation', (event, input) => {
+  const streamId = typeof input?.streamId === 'string' ? input.streamId : `text-translation-${Date.now()}`;
+  return translateWeek3Text(input, (delta) => {
+    event.sender.send('week3:stream-delta', { streamId, delta });
+  });
+});
 ipcMain.handle('week3:list-usage-events', () => listWeek3UsageEvents());
 ipcMain.handle('week3:get-usage-summary', () => getWeek3UsageSummary());
 ipcMain.on('week3:load-provider-config-sync', (event) => {
@@ -83,6 +102,9 @@ ipcMain.on('week3:save-provider-config-sync', (event, input) => {
 });
 ipcMain.on('week3:activate-provider-profile-sync', (event, profile) => {
   event.returnValue = activateProviderProfile(profile);
+});
+ipcMain.on('week3:delete-provider-profile-sync', (event, profile) => {
+  event.returnValue = deleteProviderProfile(profile);
 });
 
 void app.whenReady().then(() => {

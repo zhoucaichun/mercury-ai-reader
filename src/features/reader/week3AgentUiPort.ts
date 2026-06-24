@@ -90,13 +90,17 @@ export interface Week3ProviderConfigStore {
   saveProviderConfig?(input: ReaderLLMProviderConfigInput): Week3LLMProviderConfig;
   listProviderProfiles?(): Week3LLMProviderConfig[];
   activateProviderProfile?(profile: Week3LLMProviderConfig): Week3LLMProviderConfig;
+  deleteProviderProfile?(profile: Pick<Week3LLMProviderConfig, 'baseUrl' | 'model'>): Week3LLMProviderConfig | null;
 }
 
 export interface Week3AgentUiPort {
   generateSummary(request: Week3SummaryRequest): Promise<Week3SummaryResult>;
+  streamSummary?(request: Week3SummaryRequest, onDelta: (delta: string) => void): Promise<Week3SummaryResult>;
   translateArticle(request: Week3TranslationRequest): Promise<Week3TranslationResult>;
+  streamTranslation?(request: Week3TranslationRequest, onDelta: (delta: string) => void): Promise<Week3TranslationResult>;
   /** Translate a single text string. Used for per-paragraph and inline translation. */
   translateText?(text: string, targetLanguage: string, sourceLanguage?: string): Promise<string>;
+  streamText?(text: string, targetLanguage: string, sourceLanguage: string | undefined, onDelta: (delta: string) => void): Promise<string>;
   testConnection?(): Promise<Week3LLMConnectionTestResult>;
   listUsageEvents?(): Promise<Week3LLMUsageEvent[]>;
   getUsageSummary?(): Promise<Week3LLMUsageSummary>;
@@ -435,6 +439,33 @@ export function activateReaderLLMProviderProfile(profile: Week3LLMProviderConfig
   return profile;
 }
 
+export function deleteReaderLLMProviderProfile(profile: Pick<Week3LLMProviderConfig, 'baseUrl' | 'model'>): Week3LLMProviderConfig | null {
+  const bridgeConfig = globalThis.window?.mercury?.deleteProviderProfile?.(profile);
+  if (bridgeConfig !== undefined) {
+    return normalizeProviderConfig(bridgeConfig);
+  }
+
+  if (typeof globalThis.localStorage === 'undefined') {
+    return null;
+  }
+
+  const deletedKey = providerProfileKey(profile);
+  const profiles = loadReaderLLMProviderProfiles().filter((item) => providerProfileKey(item) !== deletedKey);
+  globalThis.localStorage.setItem(READER_LLM_PROVIDER_PROFILES_STORAGE_KEY, JSON.stringify(profiles));
+
+  const current = loadReaderLLMProviderConfig();
+  if (current && providerProfileKey(current) === deletedKey) {
+    if (profiles[0]) {
+      globalThis.localStorage.setItem(READER_LLM_PROVIDER_STORAGE_KEY, JSON.stringify(profiles[0]));
+      return profiles[0];
+    }
+    globalThis.localStorage.removeItem(READER_LLM_PROVIDER_STORAGE_KEY);
+    return null;
+  }
+
+  return current;
+}
+
 function normalizeProviderConfig(input: Partial<Week3LLMProviderConfig> | null | undefined): Week3LLMProviderConfig | null {
   if (
     input?.kind !== 'openai-compatible' ||
@@ -471,6 +502,10 @@ function saveReaderLLMProviderProfile(config: Week3LLMProviderConfig): void {
   globalThis.localStorage.setItem(READER_LLM_PROVIDER_PROFILES_STORAGE_KEY, JSON.stringify(nextProfiles));
 }
 
+function providerProfileKey(profile: Pick<Week3LLMProviderConfig, 'baseUrl' | 'model'>): string {
+  return `${profile.baseUrl.trim()}::${profile.model.trim()}`;
+}
+
 export function hasReaderLLMProviderConfig(): boolean {
   return loadReaderLLMProviderConfig() !== null;
 }
@@ -485,12 +520,28 @@ function createElectronAgentUiPort(usageStore: LLMUsageEventStore): Week3AgentUi
       });
     },
 
+    async streamSummary(request, onDelta) {
+      const config = loadRequiredReaderConfig();
+      return window.mercury!.streamSummary({
+        config: toIpcProviderConfig(config),
+        request
+      }, onDelta);
+    },
+
     async translateArticle(request) {
       const config = loadRequiredReaderConfig();
       return window.mercury!.translateArticle({
         config: toIpcProviderConfig(config),
         request
       });
+    },
+
+    async streamTranslation(request, onDelta) {
+      const config = loadRequiredReaderConfig();
+      return window.mercury!.streamTranslation({
+        config: toIpcProviderConfig(config),
+        request
+      }, onDelta);
     },
 
     async translateText(text: string, targetLanguage: string, sourceLanguage?: string) {
@@ -501,6 +552,17 @@ function createElectronAgentUiPort(usageStore: LLMUsageEventStore): Week3AgentUi
         targetLanguage,
         sourceLanguage
       });
+      return result.translatedText;
+    },
+
+    async streamText(text: string, targetLanguage: string, sourceLanguage: string | undefined, onDelta: (delta: string) => void) {
+      const config = loadRequiredReaderConfig();
+      const result = await window.mercury!.streamTextTranslation({
+        config: toIpcProviderConfig(config),
+        text,
+        targetLanguage,
+        sourceLanguage
+      }, onDelta);
       return result.translatedText;
     },
 

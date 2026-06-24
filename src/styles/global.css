@@ -2175,7 +2175,7 @@ select:focus-visible {
 
 .provider-profile-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   align-items: center;
   padding: 9px;
@@ -2211,6 +2211,35 @@ select:focus-visible {
 .provider-profile-meta span {
   color: #68736f;
   font-size: 12px;
+}
+
+.provider-profile-badges,
+.provider-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.provider-profile-badges span {
+  width: fit-content;
+  padding: 3px 7px;
+  color: #21594e;
+  background: #dfeee8;
+  border: 1px solid #b9d9ce;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.provider-profile-actions {
+  justify-content: flex-start;
+}
+
+.provider-profile-actions .tool-button,
+.provider-profile-actions .agent-status,
+.provider-profile-actions .icon-button {
+  min-height: 30px;
 }
 
 .provider-routing-grid {

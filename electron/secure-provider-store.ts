@@ -68,11 +68,29 @@ export function activateProviderProfile(profile: SecureProviderConfig): SecurePr
   return config;
 }
 
+export function deleteProviderProfile(profile: Pick<SecureProviderConfig, 'baseUrl' | 'model'>): SecureProviderConfig | null {
+  const state = loadState();
+  const deletedKey = createProfileKey(profile);
+  const profiles = state.profiles.filter((item) => createProfileKey(item) !== deletedKey);
+  const current = state.current && createProfileKey(state.current) !== deletedKey ? state.current : profiles[0];
+
+  saveState({
+    current,
+    profiles
+  });
+
+  return current ?? null;
+}
+
 function upsertProfile(profiles: SecureProviderConfig[], config: SecureProviderConfig): SecureProviderConfig[] {
   return [
     config,
     ...profiles.filter((profile) => profile.baseUrl !== config.baseUrl || profile.model !== config.model)
   ].slice(0, 12);
+}
+
+function createProfileKey(profile: Pick<SecureProviderConfig, 'baseUrl' | 'model'>): string {
+  return `${profile.baseUrl.trim()}::${profile.model.trim()}`;
 }
 
 function normalizeConfig(input: SecureProviderConfig): SecureProviderConfig {

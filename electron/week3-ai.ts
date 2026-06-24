@@ -1,8 +1,10 @@
 import { createLLMProvider } from '../src/features/agent/providers/providerFactory.js';
 import type {
+  Week3LLMChatResponse,
   Week3LLMConnectionTestResult,
   Week3LLMProviderConfig
 } from '../src/features/agent/providers/types.js';
+import { LLMProviderError } from '../src/features/agent/providers/types.js';
 import {
   callLLMWithUsage,
   InMemoryLLMUsageEventStore,
@@ -76,6 +78,8 @@ export interface Week3AiIpcInput<TRequest> {
   request: TRequest;
 }
 
+export type Week3StreamDeltaHandler = (delta: string) => void | Promise<void>;
+
 const usageStore = new InMemoryLLMUsageEventStore();
 const TRANSLATION_CHUNK_CHAR_LIMIT = 3500;
 
@@ -105,7 +109,8 @@ export async function testWeek3ProviderConnection(
 }
 
 export async function generateWeek3Summary(
-  input: Week3AiIpcInput<Week3SummaryRequest>
+  input: Week3AiIpcInput<Week3SummaryRequest>,
+  onDelta?: Week3StreamDeltaHandler
 ): Promise<Week3SummaryResult> {
   assertCanonicalMarkdown(input.request.canonicalMarkdown);
   const provider = createProvider(input.config);
@@ -147,7 +152,8 @@ export async function generateWeek3Summary(
         targetLanguage: input.request.targetLanguage,
         detailLevel: input.request.detailLevel
       }
-    }
+    },
+    onDelta
   );
 
   const createdAt = new Date().toISOString();
@@ -168,7 +174,8 @@ export async function generateWeek3Summary(
 }
 
 export async function translateWeek3Article(
-  input: Week3AiIpcInput<Week3TranslationRequest>
+  input: Week3AiIpcInput<Week3TranslationRequest>,
+  onDelta?: Week3StreamDeltaHandler
 ): Promise<Week3TranslationResult> {
   assertCanonicalMarkdown(input.request.canonicalMarkdown);
   const provider = createProvider(input.config);
@@ -213,6 +220,9 @@ export async function translateWeek3Article(
           chunkIndex: index,
           chunkCount: chunks.length
         }
+      },
+      (delta) => {
+        void onDelta?.(delta);
       }
     );
     translatedChunks.push(response.content.trim());
@@ -243,7 +253,8 @@ export interface Week3TranslateTextInput {
 }
 
 export async function translateWeek3Text(
-  input: Week3TranslateTextInput
+  input: Week3TranslateTextInput,
+  onDelta?: Week3StreamDeltaHandler
 ): Promise<{ translatedText: string }> {
   const provider = createProvider(input.config);
   const request = {
@@ -268,7 +279,7 @@ export async function translateWeek3Text(
     }
   };
 
-  const response = await callWeek3LLM(provider, request);
+  const response = await callWeek3LLM(provider, request, onDelta);
 
   return { translatedText: response.content };
 }
@@ -298,10 +309,11 @@ function createProvider(input: Week3AiIpcInput<unknown>['config']) {
 
 function callWeek3LLM(
   provider: ReturnType<typeof createProvider>,
-  request: Parameters<typeof callLLMWithUsage>[1]
-) {
+  request: Parameters<typeof callLLMWithUsage>[1],
+  onDelta?: Week3StreamDeltaHandler
+): Promise<Week3LLMChatResponse> {
   return provider.streamChat
-    ? streamLLMWithUsage(provider, request, () => undefined, usageStore)
+    ? streamLLMWithUsage(provider, request, onDelta ?? (() => undefined), usageStore)
     : callLLMWithUsage(provider, request, usageStore);
 }
 
@@ -365,6 +377,30 @@ function randomSuffix(): string {
 }
 
 function normalizeError(error: unknown): string {
+  if (error instanceof LLMProviderError) {
+    if (error.code === 'timeout') {
+      return 'Connection timed out. Check the Base URL or increase the provider timeout.';
+    }
+
+    if (error.status === 401 || error.status === 403) {
+      return `Authentication failed (HTTP ${error.status}). Check whether the API key is valid for this provider.`;
+    }
+
+    if (error.status === 404) {
+      return 'Provider endpoint or model was not found (HTTP 404). Check the Base URL path and model name.';
+    }
+
+    if (error.status === 429) {
+      return 'The provider rejected the request because of rate limit or quota (HTTP 429). Try later or switch model.';
+    }
+
+    if (error.status && error.status >= 500) {
+      return `Provider server error (HTTP ${error.status}). The model service may be temporarily unavailable.`;
+    }
+
+    return error.status ? `${error.message} (HTTP ${error.status})` : error.message;
+  }
+
   if (error instanceof Error) {
     return error.message;
   }

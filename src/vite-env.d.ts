@@ -64,22 +64,46 @@ type MercuryRuntimeInfo = {
     config: Required<ReaderLLMProviderConfigInput>;
     request: Week3SummaryRequest;
   }): Promise<Week3SummaryResult>;
+  streamSummary(
+    input: {
+      config: Required<ReaderLLMProviderConfigInput>;
+      request: Week3SummaryRequest;
+    },
+    onDelta: (delta: string) => void
+  ): Promise<Week3SummaryResult>;
   translateArticle(input: {
     config: Required<ReaderLLMProviderConfigInput>;
     request: Week3TranslationRequest;
   }): Promise<Week3TranslationResult>;
+  streamTranslation(
+    input: {
+      config: Required<ReaderLLMProviderConfigInput>;
+      request: Week3TranslationRequest;
+    },
+    onDelta: (delta: string) => void
+  ): Promise<Week3TranslationResult>;
   translateText(input: {
     config: Required<ReaderLLMProviderConfigInput>;
     text: string;
     targetLanguage: string;
     sourceLanguage?: string;
   }): Promise<{ translatedText: string }>;
+  streamTextTranslation(
+    input: {
+      config: Required<ReaderLLMProviderConfigInput>;
+      text: string;
+      targetLanguage: string;
+      sourceLanguage?: string;
+    },
+    onDelta: (delta: string) => void
+  ): Promise<{ translatedText: string }>;
   listUsageEvents(): Promise<Week3LLMUsageEvent[]>;
   getUsageSummary(): Promise<Week3LLMUsageSummary>;
   loadProviderConfig?(): Week3LLMProviderConfig | null;
   saveProviderConfig?(input: ReaderLLMProviderConfigInput): Week3LLMProviderConfig;
   listProviderProfiles?(): Week3LLMProviderConfig[];
   activateProviderProfile?(profile: Week3LLMProviderConfig): Week3LLMProviderConfig;
+  deleteProviderProfile?(profile: Pick<Week3LLMProviderConfig, 'baseUrl' | 'model'>): Week3LLMProviderConfig | null;
 };
 
 declare global {

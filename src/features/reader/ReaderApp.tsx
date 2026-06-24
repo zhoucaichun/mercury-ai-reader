@@ -48,6 +48,7 @@ import type { LLMUsageEvent } from '../usage/types';
 import {
   activateReaderLLMProviderProfile,
   createBrowserWeek3AgentUiPort,
+  deleteReaderLLMProviderProfile,
   loadReaderLLMProviderConfig,
   loadReaderLLMProviderProfiles,
   saveReaderLLMProviderConfig,
@@ -1851,6 +1852,7 @@ export function ReaderApp() {
 
     return {
       articleId: selectedArticle.id,
+      contentId: selectedContent.articleId,
       title: selectedArticle.title,
       sourceUrl: selectedArticle.url,
       feedTitle: feedTitleById.get(selectedArticle.feedId),
@@ -1924,12 +1926,39 @@ export function ReaderApp() {
         current?.startedAt === progress.startedAt ? { ...current, phase: 'requesting' } : current
       );
       moveAgentProgressToGenerating('summary', progress.startedAt);
-      const result = await agentUiPort.generateSummary({
+      const request = {
         ...articleInput,
         targetLanguage: summaryTargetLanguage,
         detailLevel: summaryDetailLevel,
         regenerate
-      });
+      };
+      let streamedMarkdown = '';
+      const provisionalResult: Week3SummaryResult = {
+        id: `summary-stream-${Date.now()}`,
+        articleId: articleInput.articleId,
+        contentId: articleInput.contentId,
+        taskId: `summary-stream-${Date.now()}`,
+        targetLanguage: summaryTargetLanguage,
+        detailLevel: summaryDetailLevel,
+        markdown: '',
+        providerId: 'school',
+        providerName: 'School Model',
+        model: loadReaderLLMProviderConfig()?.model ?? '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setSummaryResult(provisionalResult);
+
+      const result = agentUiPort.streamSummary
+        ? await agentUiPort.streamSummary(request, (delta) => {
+            streamedMarkdown += delta;
+            setSummaryResult((current) =>
+              current?.id === provisionalResult.id
+                ? { ...current, markdown: streamedMarkdown, updatedAt: new Date().toISOString() }
+                : current
+            );
+          })
+        : await agentUiPort.generateSummary(request);
       setSummaryProgress((current) =>
         current?.startedAt === progress.startedAt ? { ...current, phase: 'saving' } : current
       );
@@ -2052,13 +2081,43 @@ export function ReaderApp() {
       setParagraphTranslationProgress({ total, completed: 0 });
       const localTranslations = new Map<number, string>();
       let localTitle = '';
+      const currentConfig = loadReaderLLMProviderConfig();
+      const provisionalTranslationId = `translation-stream-${Date.now()}`;
+      const updateStreamingTranslationResult = (markdown: string) => {
+        setTranslationResult({
+          id: provisionalTranslationId,
+          articleId: selectedArticle.id,
+          taskId: provisionalTranslationId,
+          targetLanguage: targetLang,
+          sourceLanguage: srcLang,
+          markdown,
+          providerId: currentConfig?.providerId ?? 'school',
+          providerName: currentConfig?.providerName ?? 'School Model',
+          model: currentConfig?.model ?? '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      };
+      const buildCombinedMarkdown = () => {
+        const allTranslations = Array.from(localTranslations.values());
+        return (localTitle ? `# ${localTitle}\n\n` : '') + allTranslations.join('\n\n');
+      };
 
       // Translate title first
       if (agentUiPort.translateText && selectedArticle.title) {
-        const titleTranslation = await agentUiPort.translateText(selectedArticle.title, targetLang, srcLang);
+        let titleStream = '';
+        const titleTranslation = agentUiPort.streamText
+          ? await agentUiPort.streamText(selectedArticle.title, targetLang, srcLang, (delta) => {
+              titleStream += delta;
+              localTitle = titleStream.trim();
+              setTranslatedTitle(localTitle);
+              updateStreamingTranslationResult(buildCombinedMarkdown());
+            })
+          : await agentUiPort.translateText(selectedArticle.title, targetLang, srcLang);
         if (abortController.signal.aborted) return;
         localTitle = titleTranslation.trim();
         setTranslatedTitle(localTitle);
+        updateStreamingTranslationResult(buildCombinedMarkdown());
         setParagraphTranslationProgress({ total, completed: 1 });
       } else {
         setParagraphTranslationProgress({ total, completed: 1 });
@@ -2070,10 +2129,19 @@ export function ReaderApp() {
         const { index, text } = translatableBlocks[i];
         try {
           if (agentUiPort.translateText) {
-            const translation = await agentUiPort.translateText(text, targetLang, srcLang);
+            let paragraphStream = '';
+            const translation = agentUiPort.streamText
+              ? await agentUiPort.streamText(text, targetLang, srcLang, (delta) => {
+                  paragraphStream += delta;
+                  localTranslations.set(index, paragraphStream.trim());
+                  setParagraphTranslations(new Map(localTranslations));
+                  updateStreamingTranslationResult(buildCombinedMarkdown());
+                })
+              : await agentUiPort.translateText(text, targetLang, srcLang);
             if (abortController.signal.aborted) return;
             localTranslations.set(index, translation.trim());
             setParagraphTranslations(new Map(localTranslations));
+            updateStreamingTranslationResult(buildCombinedMarkdown());
           }
         } catch {
           // Skip failed paragraph, continue with others
@@ -2087,8 +2155,7 @@ export function ReaderApp() {
       setTranslationProgress((current) =>
         current?.startedAt === articleProgress.startedAt ? { ...current, phase: 'saving' } : current
       );
-      const allTranslations = Array.from(localTranslations.values());
-      const combinedMarkdown = (localTitle ? `# ${localTitle}\n\n` : '') + allTranslations.join('\n\n');
+      const combinedMarkdown = buildCombinedMarkdown();
       setTranslationResult({
         id: `translation-result-${Date.now()}`,
         articleId: selectedArticle.id,
@@ -2096,9 +2163,9 @@ export function ReaderApp() {
         targetLanguage: targetLang,
         sourceLanguage: srcLang,
         markdown: combinedMarkdown,
-        providerId: 'school',
-        providerName: 'School Model',
-        model: '',
+        providerId: currentConfig?.providerId ?? 'school',
+        providerName: currentConfig?.providerName ?? 'School Model',
+        model: currentConfig?.model ?? '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
@@ -2111,8 +2178,8 @@ export function ReaderApp() {
           markdown: combinedMarkdown,
           targetLanguage: targetLang,
           sourceLanguage: srcLang,
-          providerName: 'School Model',
-          model: '',
+          providerName: currentConfig?.providerName ?? 'School Model',
+          model: currentConfig?.model ?? '',
           createdAt: new Date().toISOString()
         };
         const updated = [entry, ...loadAiHistory(selectedArticle.id)];
@@ -2204,6 +2271,37 @@ export function ReaderApp() {
     refreshProviderProfiles();
     setProviderStatus('succeeded');
     setProviderMessage(`${copy.providerSwitched} ${config.model}`);
+  }
+
+  function handleDeleteProviderProfile(profile: Week3LLMProviderConfig) {
+    const deletedKey = providerProfileKey(profile);
+    const nextCurrent = deleteReaderLLMProviderProfile(profile);
+
+    if (summaryProviderProfileKey === deletedKey) {
+      setSummaryProviderProfileKey('');
+      saveProviderProfileKey(SUMMARY_PROVIDER_PROFILE_KEY, '');
+    }
+
+    if (translationProviderProfileKey === deletedKey) {
+      setTranslationProviderProfileKey('');
+      saveProviderProfileKey(TRANSLATION_PROVIDER_PROFILE_KEY, '');
+    }
+
+    if (nextCurrent) {
+      setProviderBaseUrl(nextCurrent.baseUrl);
+      setProviderModel(nextCurrent.model);
+      setProviderConfigured(true);
+    } else {
+      setProviderBaseUrl('');
+      setProviderModel('');
+      setProviderConfigured(false);
+    }
+
+    setProviderApiKey('');
+    setAgentUiPort(createBrowserWeek3AgentUiPort());
+    refreshProviderProfiles();
+    setProviderStatus('succeeded');
+    setProviderMessage(uiLanguage === 'zh' ? '模型配置已删除。' : 'Model provider deleted.');
   }
 
   function activateProviderForAgent(agentType: 'summary' | 'translation') {
@@ -3323,11 +3421,11 @@ export function ReaderApp() {
                   className="primary-button is-compact"
                   type="button"
                   disabled={!hasCanonicalMarkdown || summaryStatus === 'running'}
-                  title={currentSummaryMarkdown ? copy.regenerate : copy.generate}
-                  onClick={() => void handleGenerateSummary(Boolean(currentSummaryMarkdown))}
+                  title={currentSummaryMarkdown ? copy.summaryShownInBody : copy.generate}
+                  onClick={() => void handleGenerateSummary(false)}
                 >
                   <Sparkles size={16} aria-hidden="true" />
-                  {summaryStatus === 'running' ? copy.generating : currentSummaryMarkdown ? copy.regenerate : copy.generate}
+                  {summaryStatus === 'running' ? copy.generating : currentSummaryMarkdown ? copy.summary : copy.generate}
                 </button>
               </div>
             ) : (
@@ -3356,11 +3454,11 @@ export function ReaderApp() {
                   className="primary-button is-compact"
                   type="button"
                   disabled={!hasCanonicalMarkdown || translationStatus === 'running'}
-                  title={currentTranslationMarkdown ? copy.retranslate : copy.translate}
-                  onClick={() => void handleTranslateArticle(Boolean(currentTranslationMarkdown))}
+                  title={currentTranslationMarkdown ? copy.translationShownInBody : copy.translate}
+                  onClick={() => void handleTranslateArticle(false)}
                 >
                   <Languages size={16} aria-hidden="true" />
-                  {translationStatus === 'running' ? copy.translating : currentTranslationMarkdown ? copy.retranslate : copy.translate}
+                  {translationStatus === 'running' ? copy.translating : copy.translate}
                 </button>
                 <button
                   className={`tool-button is-full ${bilingualMode ? 'is-active' : ''}`}
@@ -3733,21 +3831,59 @@ export function ReaderApp() {
               ) : (
                 providerProfiles.map((profile) => {
                   const isCurrent = profile.baseUrl === providerBaseUrl && profile.model === providerModel;
+                  const key = providerProfileKey(profile);
+                  const isSummaryDefault = summaryProviderProfileKey === key;
+                  const isTranslationDefault = translationProviderProfileKey === key;
+                  const summaryLabel = uiLanguage === 'zh' ? '摘要' : 'Summary';
+                  const translationLabel = uiLanguage === 'zh' ? '翻译' : 'Translation';
 
                   return (
                     <div className={isCurrent ? 'provider-profile-row is-current' : 'provider-profile-row'} key={`${profile.baseUrl}-${profile.model}`}>
                       <div className="provider-profile-meta">
                         <strong>{profile.model}</strong>
                         <span>{profile.baseUrl}</span>
+                        <div className="provider-profile-badges">
+                          {isCurrent ? <span>{copy.currentProvider}</span> : null}
+                          {isSummaryDefault ? <span>{summaryLabel}</span> : null}
+                          {isTranslationDefault ? <span>{translationLabel}</span> : null}
+                        </div>
                       </div>
-                      <button
-                        className={isCurrent ? 'agent-status agent-status-succeeded' : 'tool-button'}
-                        disabled={isCurrent || providerStatus === 'saving' || providerStatus === 'testing'}
-                        type="button"
-                        onClick={() => handleUseProviderProfile(profile)}
-                      >
-                        {isCurrent ? copy.currentProvider : copy.useProvider}
-                      </button>
+                      <div className="provider-profile-actions">
+                        <button
+                          className={isCurrent ? 'agent-status agent-status-succeeded' : 'tool-button'}
+                          disabled={isCurrent || providerStatus === 'saving' || providerStatus === 'testing'}
+                          type="button"
+                          onClick={() => handleUseProviderProfile(profile)}
+                        >
+                          {isCurrent ? copy.currentProvider : copy.useProvider}
+                        </button>
+                        <button
+                          className={isSummaryDefault ? 'agent-status agent-status-succeeded' : 'tool-button'}
+                          disabled={providerStatus === 'saving' || providerStatus === 'testing'}
+                          type="button"
+                          onClick={() => handleAgentProviderSelection('summary', key)}
+                        >
+                          {summaryLabel}
+                        </button>
+                        <button
+                          className={isTranslationDefault ? 'agent-status agent-status-succeeded' : 'tool-button'}
+                          disabled={providerStatus === 'saving' || providerStatus === 'testing'}
+                          type="button"
+                          onClick={() => handleAgentProviderSelection('translation', key)}
+                        >
+                          {translationLabel}
+                        </button>
+                        <button
+                          className="icon-button"
+                          disabled={providerStatus === 'saving' || providerStatus === 'testing'}
+                          type="button"
+                          aria-label={copy.delete}
+                          title={copy.delete}
+                          onClick={() => handleDeleteProviderProfile(profile)}
+                        >
+                          <Trash2 size={15} aria-hidden="true" />
+                        </button>
+                      </div>
                     </div>
                   );
                 })
