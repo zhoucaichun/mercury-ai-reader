@@ -50,12 +50,13 @@ export type Week2OpmlPreviewPayload = {
 
 export type Week2OpmlImportProgress = {
   jobId?: string;
-  phase: 'importing' | 'imported' | 'syncing' | 'feed-succeeded' | 'feed-failed' | 'completed';
+  phase: 'importing' | 'feed-imported' | 'imported' | 'syncing' | 'feed-succeeded' | 'feed-failed' | 'completed';
   total: number;
   completed: number;
   importedCount: number;
   skippedCount: number;
   currentTitle?: string;
+  feed?: Week2Feed;
   message?: string;
   result?: Week2SyncAllResult['results'][number];
   payload?: Week2FrontendSyncPayload;
@@ -275,9 +276,9 @@ export async function importOpmlAndSync(
     importableSubscriptions.push(subscription);
   }
 
-  if (importableSubscriptions.length > 0) {
-    await storage.saveFeeds(
-      importableSubscriptions.map((subscription) => ({
+  for (const [index, subscription] of importableSubscriptions.entries()) {
+    const [savedFeed] = await storage.saveFeeds([
+      {
         id: 'auto',
         title: subscription.title,
         feedUrl: subscription.feedUrl,
@@ -286,8 +287,20 @@ export async function importOpmlAndSync(
         status: 'ready',
         lastSyncedAt: undefined,
         isEnabled: true
-      }))
-    );
+      }
+    ]);
+
+    options.onProgress?.({
+      jobId: options.jobId,
+      phase: 'feed-imported',
+      total: importableSubscriptions.length,
+      completed: index + 1,
+      importedCount: index + 1,
+      skippedCount: skippedMessages.length,
+      currentTitle: subscription.title,
+      feed: savedFeed,
+      message: `Imported OPML feed ${index + 1}/${importableSubscriptions.length}: ${subscription.title}`
+    });
   }
 
   const subscriptions = await listActiveStoredSubscriptions();

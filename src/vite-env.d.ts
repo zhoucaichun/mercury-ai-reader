@@ -40,12 +40,13 @@ type MercuryWeek2OpmlPreviewPayload = {
 
 type MercuryWeek2OpmlImportProgress = {
   jobId?: string;
-  phase: 'importing' | 'imported' | 'syncing' | 'feed-succeeded' | 'feed-failed' | 'completed';
+  phase: 'importing' | 'feed-imported' | 'imported' | 'syncing' | 'feed-succeeded' | 'feed-failed' | 'completed';
   total: number;
   completed: number;
   importedCount: number;
   skippedCount: number;
   currentTitle?: string;
+  feed?: Week2Feed;
   message?: string;
   payload?: MercuryWeek2SyncPayload;
 };

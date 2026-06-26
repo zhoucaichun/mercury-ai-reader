@@ -2598,9 +2598,28 @@ export function ReaderApp() {
         importedCount: number;
         skippedCount: number;
         currentTitle?: string;
+        feed?: Feed;
         message?: string;
         payload?: Awaited<ReturnType<NonNullable<typeof runtime>['runWeek2Sync']>>;
       }) => {
+        if (progress.phase === 'feed-imported' && progress.feed) {
+          setFeedsStatus('ready');
+          setFeeds((currentFeeds) => {
+            if (currentFeeds.some((feed) => feed.id === progress.feed!.id || feed.feedUrl === progress.feed!.feedUrl)) {
+              return currentFeeds;
+            }
+            return [...currentFeeds, progress.feed!];
+          });
+          setSelectedFeedId((current) => current || progress.feed!.id);
+          setSyncStatus('running');
+          setSyncMessage(
+            `Importing OPML feeds ${progress.completed}/${progress.total}${
+              progress.currentTitle ? `: ${progress.currentTitle}` : ''
+            }`
+          );
+          return;
+        }
+
         if (progress.phase === 'imported' && progress.payload) {
           receivedInitialPayload = true;
           applySyncPayload(progress.payload);
