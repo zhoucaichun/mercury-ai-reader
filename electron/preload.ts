@@ -18,6 +18,34 @@ function invokeWithStreamDelta<T>(
     .finally(() => ipcRenderer.removeListener('week3:stream-delta', listener));
 }
 
+function invokeWithOpmlProgress<T>(
+  channel: string,
+  input: Record<string, unknown>,
+  onProgress?: (progress: unknown) => void
+): Promise<T> {
+  if (!onProgress) {
+    return ipcRenderer.invoke(channel, input);
+  }
+
+  const jobId = `${channel}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const listener = (_event: Electron.IpcRendererEvent, progress: { jobId?: string; phase?: string }) => {
+    if (progress?.jobId === jobId) {
+      onProgress(progress);
+      if (progress.phase === 'completed') {
+        ipcRenderer.removeListener('week2:opml-import-progress', listener);
+      }
+    }
+  };
+
+  ipcRenderer.on('week2:opml-import-progress', listener);
+  return ipcRenderer
+    .invoke(channel, { ...input, jobId })
+    .catch((error) => {
+      ipcRenderer.removeListener('week2:opml-import-progress', listener);
+      throw error;
+    });
+}
+
 contextBridge.exposeInMainWorld('mercury', {
   platform: process.platform,
   versions: {
@@ -26,8 +54,10 @@ contextBridge.exposeInMainWorld('mercury', {
     node: process.versions.node
   },
   runWeek2Sync: (feedUrls?: string[]) => ipcRenderer.invoke('week2:sync', feedUrls),
-  importOpmlText: (opmlText: string) => ipcRenderer.invoke('week2:import-opml', opmlText),
-  importOpmlFile: (filePath: string) => ipcRenderer.invoke('week2:import-opml-file', filePath),
+  importOpmlText: (opmlText: string, onProgress?: (progress: unknown) => void) =>
+    invokeWithOpmlProgress('week2:import-opml', { opmlText }, onProgress),
+  importOpmlFile: (filePath: string, onProgress?: (progress: unknown) => void) =>
+    invokeWithOpmlProgress('week2:import-opml-file', { filePath }, onProgress),
   previewOpmlText: (opmlText: string) => ipcRenderer.invoke('week2:preview-opml', opmlText),
   updateArticleState: (input: { articleId: string; isRead?: boolean; isStarred?: boolean }) =>
     ipcRenderer.invoke('week2:update-article-state', input),

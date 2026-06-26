@@ -2522,7 +2522,7 @@ export function ReaderApp() {
     setSyncMessage(copy.syncHelp);
 
     const opmlPart = payload.opml
-      ? ` Imported ${payload.opml.importedCount} OPML feed(s), skipped ${payload.opml.skippedCount}.`
+      ? ` Imported ${payload.opml.importedCount} OPML feed(s), skipped ${payload.opml.skippedCount}. Click Sync feeds to fetch articles.`
       : '';
     const storagePart =
       payload.storage?.mode === 'sqlite'
@@ -2531,7 +2531,9 @@ export function ReaderApp() {
           ? ' Stored locally.'
           : '';
     showToast(
-      `Synced ${payload.result.totalSubscriptions} feed(s), saved ${payload.result.totalSavedArticles} article(s).${opmlPart}${storagePart}`,
+      payload.opml && payload.result.totalSubscriptions === 0
+        ? `Imported ${payload.opml.importedCount} OPML feed(s), skipped ${payload.opml.skippedCount}. Click Sync feeds to fetch articles.${storagePart}`
+        : `Synced ${payload.result.totalSubscriptions} feed(s), saved ${payload.result.totalSavedArticles} article(s).${opmlPart}${storagePart}`,
       resultStatus
     );
     setOpmlSummary(null);
@@ -2584,15 +2586,61 @@ export function ReaderApp() {
     }
 
     setSyncStatus('running');
-    setSyncMessage(`Importing ${file.name} and syncing its feeds...`);
+    setSyncMessage(`Importing ${file.name}...`);
 
     try {
       const electronFilePath = 'path' in file ? String((file as File & { path?: string }).path || '') : '';
+      let receivedInitialPayload = false;
+      const handleProgress = (progress: {
+        phase: string;
+        total: number;
+        completed: number;
+        importedCount: number;
+        skippedCount: number;
+        currentTitle?: string;
+        message?: string;
+        payload?: Awaited<ReturnType<NonNullable<typeof runtime>['runWeek2Sync']>>;
+      }) => {
+        if (progress.phase === 'imported' && progress.payload) {
+          receivedInitialPayload = true;
+          applySyncPayload(progress.payload);
+          setSyncStatus(progress.total > 0 ? 'running' : 'succeeded');
+          setSyncMessage(
+            progress.total > 0
+              ? `Imported ${progress.importedCount} feed(s). Syncing imported feeds 0/${progress.total} in background...`
+              : `Imported ${progress.importedCount} feed(s), skipped ${progress.skippedCount}.`
+          );
+          return;
+        }
+
+        if (progress.phase === 'syncing' || progress.phase === 'feed-succeeded' || progress.phase === 'feed-failed') {
+          setSyncStatus('running');
+          setSyncMessage(
+            `Syncing imported feeds ${progress.completed}/${progress.total}${
+              progress.currentTitle ? `: ${progress.currentTitle}` : ''
+            }`
+          );
+          return;
+        }
+
+        if (progress.phase === 'completed' && progress.payload) {
+          applySyncPayload(progress.payload);
+          setSyncStatus(progress.payload.result.status === 'failed' ? 'failed' : 'succeeded');
+          setSyncMessage(copy.syncHelp);
+          showToast(
+            `Finished OPML background sync: ${progress.payload.result.succeededCount}/${progress.total} feed(s), saved ${progress.payload.result.totalSavedArticles} article(s).`,
+            progress.payload.result.status === 'failed' ? 'failed' : 'succeeded'
+          );
+        }
+      };
       const payload =
         electronFilePath && runtime.importOpmlFile
-          ? await runtime.importOpmlFile(electronFilePath)
-          : await runtime.importOpmlText(await file.text());
-      applySyncPayload(payload);
+          ? await runtime.importOpmlFile(electronFilePath, handleProgress)
+          : await runtime.importOpmlText(await file.text(), handleProgress);
+
+      if (!receivedInitialPayload) {
+        applySyncPayload(payload);
+      }
     } catch (error) {
       setSyncStatus('failed');
       setSyncMessage(copy.syncHelp);

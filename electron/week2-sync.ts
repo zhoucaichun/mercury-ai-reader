@@ -48,6 +48,24 @@ export type Week2OpmlPreviewPayload = {
   messages: string[];
 };
 
+export type Week2OpmlImportProgress = {
+  jobId?: string;
+  phase: 'importing' | 'imported' | 'syncing' | 'feed-succeeded' | 'feed-failed' | 'completed';
+  total: number;
+  completed: number;
+  importedCount: number;
+  skippedCount: number;
+  currentTitle?: string;
+  message?: string;
+  result?: Week2SyncAllResult['results'][number];
+  payload?: Week2FrontendSyncPayload;
+};
+
+export type Week2OpmlImportOptions = {
+  jobId?: string;
+  onProgress?: (progress: Week2OpmlImportProgress) => void;
+};
+
 let database: Database.Database | null = null;
 let storagePort: Week2StoragePort | null = null;
 let storageMode: Week2FrontendSyncPayload['storage']['mode'] = 'sqlite';
@@ -227,7 +245,10 @@ export async function runWeek2Sync(feedUrls?: string[]): Promise<Week2FrontendSy
   return buildPayload({ result, feedUrls: subscriptions.map((subscription) => subscription.feedUrl) });
 }
 
-export async function importOpmlAndSync(opmlText: string): Promise<Week2FrontendSyncPayload> {
+export async function importOpmlAndSync(
+  opmlText: string,
+  options: Week2OpmlImportOptions = {}
+): Promise<Week2FrontendSyncPayload> {
   const parsed = parseOpmlText(opmlText);
   const parsedFeedUrls = parsed.subscriptions.map((subscription) => subscription.feedUrl);
 
@@ -235,7 +256,6 @@ export async function importOpmlAndSync(opmlText: string): Promise<Week2Frontend
     throw new Error('The OPML file did not contain any valid http/https Feed URL.');
   }
 
-  // Build a set of existing feed URLs (lowercased) to detect duplicates across imports
   const storage = getStorage();
   const existingFeeds = await storage.listFeeds();
   const existingFeedUrls = new Set(existingFeeds.map((feed) => (feed.feedUrl ?? '').toLowerCase()));
@@ -271,28 +291,132 @@ export async function importOpmlAndSync(opmlText: string): Promise<Week2Frontend
   }
 
   const subscriptions = await listActiveStoredSubscriptions();
+  const opml = {
+    importedCount: importableSubscriptions.length,
+    skippedCount: skippedMessages.length,
+    messages: skippedMessages
+  };
+  const initialPayload = await buildPayload({
+    result: emptyResult(),
+    feedUrls: subscriptions.map((subscription) => subscription.feedUrl),
+    opml
+  });
 
+  options.onProgress?.({
+    jobId: options.jobId,
+    phase: 'imported',
+    total: importableSubscriptions.length,
+    completed: 0,
+    importedCount: importableSubscriptions.length,
+    skippedCount: skippedMessages.length,
+    message: `Imported ${importableSubscriptions.length} OPML feed(s).`,
+    payload: initialPayload
+  });
+
+  if (importableSubscriptions.length > 0) {
+    void syncImportedSubscriptionsInBackground(importableSubscriptions, opml, options).catch((error: any) => {
+      options.onProgress?.({
+        jobId: options.jobId,
+        phase: 'completed',
+        total: importableSubscriptions.length,
+        completed: 0,
+        importedCount: importableSubscriptions.length,
+        skippedCount: skippedMessages.length,
+        message: `OPML background sync failed: ${error.message}`,
+        payload: initialPayload
+      });
+    });
+  } else {
+    options.onProgress?.({
+      jobId: options.jobId,
+      phase: 'completed',
+      total: 0,
+      completed: 0,
+      importedCount: 0,
+      skippedCount: skippedMessages.length,
+      message: 'No new OPML feeds to sync.',
+      payload: initialPayload
+    });
+  }
+
+  return initialPayload;
+}
+
+export async function importOpmlFileAndSync(
+  filePath: string,
+  options: Week2OpmlImportOptions = {}
+): Promise<Week2FrontendSyncPayload> {
+  const opmlText = await fs.readFile(filePath, 'utf8');
+  return importOpmlAndSync(opmlText, options);
+}
+
+async function syncImportedSubscriptionsInBackground(
+  subscriptions: Week2Subscription[],
+  opml: NonNullable<Week2FrontendSyncPayload['opml']>,
+  options: Week2OpmlImportOptions
+) {
   const syncService = createSyncService({
     subscriptionProvider: createStaticSubscriptionProvider(subscriptions),
     feedParser: week2FeedParser,
-    storage: storage
+    storage: getStorage()
+  });
+  const total = subscriptions.length;
+  let completed = 0;
+
+  options.onProgress?.({
+    jobId: options.jobId,
+    phase: 'syncing',
+    total,
+    completed,
+    importedCount: opml.importedCount,
+    skippedCount: opml.skippedCount,
+    message: `Syncing imported feeds 0/${total}.`
   });
 
-  const result = await syncService.syncAll();
-  return buildPayload({
-    result,
-    feedUrls: subscriptions.map((subscription) => subscription.feedUrl),
-    opml: {
-      importedCount: importableSubscriptions.length,
-      skippedCount: skippedMessages.length,
-      messages: skippedMessages
-    }
+  const results = await mapWithConcurrency(subscriptions, 6, async (subscription) => {
+    const result = await syncService.syncFeed(subscription.id);
+    completed += 1;
+    options.onProgress?.({
+      jobId: options.jobId,
+      phase: result.status === 'succeeded' ? 'feed-succeeded' : 'feed-failed',
+      total,
+      completed,
+      importedCount: opml.importedCount,
+      skippedCount: opml.skippedCount,
+      currentTitle: subscription.title,
+      message: `Synced imported feeds ${completed}/${total}: ${subscription.title}`,
+      result
+    });
+    return result;
   });
-}
 
-export async function importOpmlFileAndSync(filePath: string): Promise<Week2FrontendSyncPayload> {
-  const opmlText = await fs.readFile(filePath, 'utf8');
-  return importOpmlAndSync(opmlText);
+  const succeededCount = results.filter((result) => result.status === 'succeeded').length;
+  const failedCount = results.filter((result) => result.status === 'failed').length;
+  const finalResult: Week2SyncAllResult = {
+    status: failedCount === 0 ? 'succeeded' : succeededCount === 0 ? 'failed' : 'partial',
+    totalSubscriptions: total,
+    succeededCount,
+    failedCount,
+    totalSavedArticles: results.reduce((sum, result) => sum + result.savedCount, 0),
+    results
+  };
+  const activeSubscriptions = await listActiveStoredSubscriptions();
+  const payload = await buildPayload({
+    result: finalResult,
+    feedUrls: activeSubscriptions.map((subscription) => subscription.feedUrl),
+    opml
+  });
+
+  options.onProgress?.({
+    jobId: options.jobId,
+    phase: 'completed',
+    total,
+    completed,
+    importedCount: opml.importedCount,
+    skippedCount: opml.skippedCount,
+    message: `Finished syncing ${succeededCount}/${total} imported feeds.`,
+    payload
+  });
 }
 
 export async function previewOpmlImport(opmlText: string): Promise<Week2OpmlPreviewPayload> {
@@ -339,4 +463,26 @@ function emptyResult(): Week2SyncAllResult {
     totalSavedArticles: 0,
     results: []
   };
+}
+
+async function mapWithConcurrency<TInput, TOutput>(
+  items: TInput[],
+  concurrency: number,
+  worker: (item: TInput, index: number) => Promise<TOutput>
+): Promise<TOutput[]> {
+  const results = new Array<TOutput>(items.length);
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+  let nextIndex = 0;
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < items.length) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+        results[currentIndex] = await worker(items[currentIndex], currentIndex);
+      }
+    })
+  );
+
+  return results;
 }

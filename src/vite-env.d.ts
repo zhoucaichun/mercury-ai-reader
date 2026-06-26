@@ -38,6 +38,18 @@ type MercuryWeek2OpmlPreviewPayload = {
   messages: string[];
 };
 
+type MercuryWeek2OpmlImportProgress = {
+  jobId?: string;
+  phase: 'importing' | 'imported' | 'syncing' | 'feed-succeeded' | 'feed-failed' | 'completed';
+  total: number;
+  completed: number;
+  importedCount: number;
+  skippedCount: number;
+  currentTitle?: string;
+  message?: string;
+  payload?: MercuryWeek2SyncPayload;
+};
+
 type MercuryRuntimeInfo = {
   platform: NodeJS.Platform;
   versions: {
@@ -46,8 +58,14 @@ type MercuryRuntimeInfo = {
     node: string;
   };
   runWeek2Sync(feedUrls?: string[]): Promise<MercuryWeek2SyncPayload>;
-  importOpmlText(opmlText: string): Promise<MercuryWeek2SyncPayload>;
-  importOpmlFile?(filePath: string): Promise<MercuryWeek2SyncPayload>;
+  importOpmlText(
+    opmlText: string,
+    onProgress?: (progress: MercuryWeek2OpmlImportProgress) => void
+  ): Promise<MercuryWeek2SyncPayload>;
+  importOpmlFile?(
+    filePath: string,
+    onProgress?: (progress: MercuryWeek2OpmlImportProgress) => void
+  ): Promise<MercuryWeek2SyncPayload>;
   previewOpmlText(opmlText: string): Promise<MercuryWeek2OpmlPreviewPayload>;
   updateArticleState(input: {
     articleId: string;

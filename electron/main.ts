@@ -62,8 +62,26 @@ function createMainWindow() {
 }
 
 ipcMain.handle('week2:sync', (_event, feedUrls?: string[]) => runWeek2Sync(feedUrls));
-ipcMain.handle('week2:import-opml', (_event, opmlText: string) => importOpmlAndSync(opmlText));
-ipcMain.handle('week2:import-opml-file', (_event, filePath: string) => importOpmlFileAndSync(filePath));
+ipcMain.handle('week2:import-opml', (event, input: string | { opmlText: string; jobId?: string }) => {
+  const opmlText = typeof input === 'string' ? input : input.opmlText;
+  const jobId = typeof input === 'string' ? undefined : input.jobId;
+  return importOpmlAndSync(opmlText, {
+    jobId,
+    onProgress: (progress) => {
+      event.sender.send('week2:opml-import-progress', progress);
+    }
+  });
+});
+ipcMain.handle('week2:import-opml-file', (event, input: string | { filePath: string; jobId?: string }) => {
+  const filePath = typeof input === 'string' ? input : input.filePath;
+  const jobId = typeof input === 'string' ? undefined : input.jobId;
+  return importOpmlFileAndSync(filePath, {
+    jobId,
+    onProgress: (progress) => {
+      event.sender.send('week2:opml-import-progress', progress);
+    }
+  });
+});
 ipcMain.handle('week2:preview-opml', (_event, opmlText: string) => previewOpmlImport(opmlText));
 ipcMain.handle('week2:update-article-state', (_event, input) => updateArticleState(input));
 ipcMain.handle('week2:update-feed-subscription', (_event, input) => updateFeedSubscription(input));
