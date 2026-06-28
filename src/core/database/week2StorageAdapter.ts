@@ -24,6 +24,67 @@ export function createWeek2StoragePort(db: Database.Database): Week2StoragePort 
   const feedStore = createFeedStore(db);
   const entryStore = createEntryStore(db);
   const contentStore = createContentStore(db);
+  let duplicateFeedsCompacted = false;
+
+  function compactDuplicateFeedsOnce(): void {
+    if (duplicateFeedsCompacted) return;
+    duplicateFeedsCompacted = true;
+
+    const feeds = feedStore.getAll();
+    const groups = new Map<string, typeof feeds>();
+
+    for (const feed of feeds) {
+      const key = createFeedDedupeKey(feed);
+      if (!key) continue;
+      groups.set(key, [...(groups.get(key) ?? []), feed]);
+    }
+
+    const duplicateGroups = [...groups.values()].filter((group) => group.length > 1);
+    if (duplicateGroups.length === 0) return;
+
+    const getEntryRows = db.prepare('SELECT id, guid, url FROM entry WHERE feedId = ?');
+    const findByGuid = db.prepare('SELECT id FROM entry WHERE feedId = ? AND guid = ? AND id <> ?');
+    const findByUrl = db.prepare('SELECT id FROM entry WHERE feedId = ? AND url = ? AND id <> ?');
+    const moveEntry = db.prepare('UPDATE entry SET feedId = ? WHERE id = ?');
+    const deleteEntry = db.prepare('DELETE FROM entry WHERE id = ?');
+    const deleteFeed = db.prepare('DELETE FROM feed WHERE id = ?');
+
+    db.transaction(() => {
+      for (const group of duplicateGroups) {
+        const ranked = [...group].sort((a, b) => {
+          const totalDiff = entryStore.getTotalCount(b.id) - entryStore.getTotalCount(a.id);
+          if (totalDiff !== 0) return totalDiff;
+          const bTime = Date.parse(b.lastFetchedAt ?? '') || 0;
+          const aTime = Date.parse(a.lastFetchedAt ?? '') || 0;
+          if (bTime !== aTime) return bTime - aTime;
+          return a.id - b.id;
+        });
+        const canonical = ranked[0];
+        const duplicates = ranked.slice(1);
+
+        for (const duplicate of duplicates) {
+          const entries = getEntryRows.all(duplicate.id) as Array<{ id: number; guid: string | null; url: string | null }>;
+
+          for (const entry of entries) {
+            const existingByGuid = entry.guid
+              ? (findByGuid.get(canonical.id, entry.guid, entry.id) as { id: number } | undefined)
+              : undefined;
+            const existingByUrl = entry.url
+              ? (findByUrl.get(canonical.id, entry.url, entry.id) as { id: number } | undefined)
+              : undefined;
+
+            if (existingByGuid || existingByUrl) {
+              deleteEntry.run(entry.id);
+            } else {
+              moveEntry.run(canonical.id, entry.id);
+            }
+          }
+
+          deleteFeed.run(duplicate.id);
+        }
+      }
+    })();
+  }
 
   return {
     async saveFeeds(feeds: Week2Feed[]): Promise<Week2Feed[]> {
@@ -57,6 +118,7 @@ export function createWeek2StoragePort(db: Database.Database): Week2StoragePort 
     },
 
     async listFeeds(): Promise<Week2Feed[]> {
+      compactDuplicateFeedsOnce();
       const feeds = feedStore.getAll();
       return feeds.map((feed) => mapFeedToWeek2(feed, entryStore.getUnreadCount(feed.id)));
     },
@@ -113,6 +175,7 @@ export function createWeek2StoragePort(db: Database.Database): Week2StoragePort 
       feedId?: string;
       searchText?: string;
     }): Promise<Week2Article[]> {
+      compactDuplicateFeedsOnce();
       let sql = `
         SELECT e.*, f.title as feedSourceTitle
         FROM entry e
@@ -259,6 +322,28 @@ function mapFeedToWeek2(feed: {
     lastSyncedAt: feed.lastFetchedAt ?? undefined,
     isEnabled: feed.isEnabled !== false && feed.isEnabled !== 0,
   };
+}
+
+function createFeedDedupeKey(feed: {
+  title: string | null;
+  feedUrl: string;
+  siteUrl: string | null;
+}): string | null {
+  const title = (feed.title ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const host = getUrlHost(feed.siteUrl) ?? getUrlHost(feed.feedUrl);
+
+  if (!title || !host) return null;
+  return `${host}::${title}`;
+}
+
+function getUrlHost(value?: string | null): string | null {
+  if (!value) return null;
+
+  try {
+    return new URL(value).hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    return null;
+  }
 }
 
 function mapEntryToWeek2Article(entry: {

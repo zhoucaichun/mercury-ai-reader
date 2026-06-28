@@ -55,7 +55,7 @@ export function createSyncService(deps: {
     const feed: Week2Feed = {
       id: feedId,
       title: parsedFeed.feed.title || feedTitle,
-      feedUrl: parsedFeed.feed.feedUrl || feedUrl,
+      feedUrl,
       siteUrl: parsedFeed.feed.siteUrl,
       unreadCount: parsedFeed.articles.length,
       status: 'syncing' as Week2FeedStatus,
