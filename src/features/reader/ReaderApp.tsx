@@ -721,7 +721,7 @@ function createSnapshotReaderDataPort(input: {
   feeds: Feed[];
   articles: Article[];
   contents: ArticleContent[];
-}): Week2ReaderDataPort {
+}, contentLoader?: (articleId: string) => Promise<ArticleContent | null>): Week2ReaderDataPort {
   return {
     async listFeeds() {
       return input.feeds;
@@ -732,7 +732,7 @@ function createSnapshotReaderDataPort(input: {
     },
 
     async getArticleContent(articleId: string) {
-      return input.contents.find((content) => content.articleId === articleId) ?? null;
+      return input.contents.find((content) => content.articleId === articleId) ?? contentLoader?.(articleId) ?? null;
     }
   };
 }
@@ -2499,13 +2499,15 @@ export function ReaderApp() {
   }
 
   function applySyncPayload(payload: Awaited<ReturnType<NonNullable<typeof runtime>['runWeek2Sync']>>) {
-    const nextDataPort = createSnapshotReaderDataPort(payload);
+    const nextDataPort = createSnapshotReaderDataPort(payload, runtime?.getArticleContent);
     const nextFeedId = payload.feeds.some((feed) => feed.id === selectedFeedId) ? selectedFeedId : payload.feeds[0]?.id ?? '';
     const nextArticles = payload.articles.filter((article) => !nextFeedId || article.feedId === nextFeedId);
     const nextArticleId = nextArticles.some((article) => article.id === selectedArticleId)
       ? selectedArticleId
       : nextArticles[0]?.id ?? payload.articles[0]?.id ?? '';
-    const nextContent = payload.contents.find((content) => content.articleId === nextArticleId) ?? null;
+    const nextContent =
+      payload.contents.find((content) => content.articleId === nextArticleId) ??
+      (nextArticleId === selectedArticleId ? selectedContent : null);
 
     setDataPort(() => nextDataPort);
     setSearchText('');
@@ -2516,7 +2518,7 @@ export function ReaderApp() {
     setSelectedContent(nextContent);
     setFeedsStatus('ready');
     setArticlesStatus('ready');
-    setContentStatus(nextContent?.cleanedHtml && nextContent.canonicalMarkdown ? 'ready' : 'empty');
+    setContentStatus(nextContent?.cleanedHtml && nextContent.canonicalMarkdown ? 'ready' : nextArticleId ? 'loading' : 'empty');
     const resultStatus = payload.result.status === 'failed' ? 'failed' : 'succeeded';
     setSyncStatus(resultStatus);
     setSyncMessage(copy.syncHelp);

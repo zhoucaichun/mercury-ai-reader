@@ -68,6 +68,7 @@ type MercuryRuntimeInfo = {
     onProgress?: (progress: MercuryWeek2OpmlImportProgress) => void
   ): Promise<MercuryWeek2SyncPayload>;
   previewOpmlText(opmlText: string): Promise<MercuryWeek2OpmlPreviewPayload>;
+  getArticleContent(articleId: string): Promise<Week2ArticleContent | null>;
   updateArticleState(input: {
     articleId: string;
     isRead?: boolean;

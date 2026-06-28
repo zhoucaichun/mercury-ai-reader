@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import {
+  getStoredArticleContent,
   importOpmlAndSync,
   importOpmlFileAndSync,
   previewOpmlImport,
@@ -83,6 +84,7 @@ ipcMain.handle('week2:import-opml-file', (event, input: string | { filePath: str
   });
 });
 ipcMain.handle('week2:preview-opml', (_event, opmlText: string) => previewOpmlImport(opmlText));
+ipcMain.handle('week2:get-article-content', (_event, articleId: string) => getStoredArticleContent(articleId));
 ipcMain.handle('week2:update-article-state', (_event, input) => updateArticleState(input));
 ipcMain.handle('week2:update-feed-subscription', (_event, input) => updateFeedSubscription(input));
 ipcMain.handle('week3:test-provider', (_event, config) => testWeek3ProviderConnection(config));

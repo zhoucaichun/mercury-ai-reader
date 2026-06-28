@@ -170,30 +170,34 @@ async function buildPayload(input: {
   feedUrls: string[];
   opml?: Week2FrontendSyncPayload['opml'];
   refreshPipeline?: boolean;
+  includeContents?: boolean;
 }): Promise<Week2FrontendSyncPayload> {
   const storage = getStorage();
   const pipeline = createReaderPipeline();
   const feeds = await storage.listFeeds();
   const articles = await storage.listArticles();
   const refreshPipeline = input.refreshPipeline ?? true;
+  const includeContents = input.includeContents ?? false;
 
-  const contents = (
-    await Promise.all(
-      articles.map(async (article) => {
-        const content = await storage.getArticleContent(article.id);
-        if (!content) return null;
-        if (!refreshPipeline) return content;
+  const contents = includeContents
+    ? (
+        await Promise.all(
+          articles.map(async (article) => {
+            const content = await storage.getArticleContent(article.id);
+            if (!content) return null;
+            if (!refreshPipeline) return content;
 
-        const piped = await pipeline.runPipeline({
-          articleId: article.id,
-          sourceHtml: content.sourceHtml,
-          url: article.url
-        });
-        await storage.saveArticleContent(piped);
-        return piped;
-      })
-    )
-  ).filter((content): content is Week2ArticleContent => Boolean(content));
+            const piped = await pipeline.runPipeline({
+              articleId: article.id,
+              sourceHtml: content.sourceHtml,
+              url: article.url
+            });
+            await storage.saveArticleContent(piped);
+            return piped;
+          })
+        )
+      ).filter((content): content is Week2ArticleContent => Boolean(content))
+    : [];
 
   return {
     result: input.result,
@@ -247,6 +251,22 @@ export async function runWeek2Sync(feedUrls?: string[]): Promise<Week2FrontendSy
 
   const result = await syncService.syncAll();
   return buildPayload({ result, feedUrls: subscriptions.map((subscription) => subscription.feedUrl) });
+}
+
+export async function getStoredArticleContent(articleId: string): Promise<Week2ArticleContent | null> {
+  const storage = getStorage();
+  const content = await storage.getArticleContent(articleId);
+  if (!content) return null;
+
+  const articles = await storage.listArticles();
+  const article = articles.find((item) => item.id === articleId);
+  const piped = await createReaderPipeline().runPipeline({
+    articleId,
+    sourceHtml: content.sourceHtml,
+    url: article?.url
+  });
+  await storage.saveArticleContent(piped);
+  return piped;
 }
 
 export async function importOpmlAndSync(
@@ -316,7 +336,8 @@ export async function importOpmlAndSync(
     result: emptyResult(),
     feedUrls: subscriptions.map((subscription) => subscription.feedUrl),
     opml,
-    refreshPipeline: false
+    refreshPipeline: false,
+    includeContents: false
   });
 
   options.onProgress?.({
@@ -380,6 +401,7 @@ async function syncImportedSubscriptionsInBackground(
   const total = subscriptions.length;
   let completed = 0;
   const results: Week2SyncAllResult['results'] = [];
+  let lastPayloadAt = 0;
 
   options.onProgress?.({
     jobId: options.jobId,
@@ -391,28 +413,14 @@ async function syncImportedSubscriptionsInBackground(
     message: `Syncing imported feeds 0/${total}.`
   });
 
-  await mapWithConcurrency(subscriptions, 6, async (subscription) => {
+  await mapWithConcurrency(subscriptions, 4, async (subscription) => {
     const result = await syncService.syncFeed(subscription.id);
     completed += 1;
     results.push(result);
 
-    const succeededCount = results.filter((item) => item.status === 'succeeded').length;
-    const failedCount = results.filter((item) => item.status === 'failed').length;
-    const partialResult: Week2SyncAllResult = {
-      status: failedCount === 0 ? 'succeeded' : succeededCount === 0 ? 'failed' : 'partial',
-      totalSubscriptions: total,
-      succeededCount,
-      failedCount,
-      totalSavedArticles: results.reduce((sum, item) => sum + item.savedCount, 0),
-      results: [...results]
-    };
-    const activeSubscriptions = await listActiveStoredSubscriptions();
-    const payload = await buildPayload({
-      result: partialResult,
-      feedUrls: activeSubscriptions.map((item) => item.feedUrl),
-      opml,
-      refreshPipeline: false
-    });
+    const shouldSendPayload = completed === total || completed % 5 === 0 || Date.now() - lastPayloadAt > 2_000;
+    const payload = shouldSendPayload ? await buildProgressPayload(results, total, opml) : undefined;
+    if (payload) lastPayloadAt = Date.now();
 
     options.onProgress?.({
       jobId: options.jobId,
@@ -443,7 +451,9 @@ async function syncImportedSubscriptionsInBackground(
   const payload = await buildPayload({
     result: finalResult,
     feedUrls: activeSubscriptions.map((subscription) => subscription.feedUrl),
-    opml
+    opml,
+    refreshPipeline: false,
+    includeContents: false
   });
 
   options.onProgress?.({
@@ -455,6 +465,31 @@ async function syncImportedSubscriptionsInBackground(
     skippedCount: opml.skippedCount,
     message: `Finished syncing ${succeededCount}/${total} imported feeds.`,
     payload
+  });
+}
+
+async function buildProgressPayload(
+  results: Week2SyncAllResult['results'],
+  total: number,
+  opml: NonNullable<Week2FrontendSyncPayload['opml']>
+): Promise<Week2FrontendSyncPayload> {
+  const succeededCount = results.filter((item) => item.status === 'succeeded').length;
+  const failedCount = results.filter((item) => item.status === 'failed').length;
+  const partialResult: Week2SyncAllResult = {
+    status: failedCount === 0 ? 'succeeded' : succeededCount === 0 ? 'failed' : 'partial',
+    totalSubscriptions: total,
+    succeededCount,
+    failedCount,
+    totalSavedArticles: results.reduce((sum, item) => sum + item.savedCount, 0),
+    results: [...results]
+  };
+  const activeSubscriptions = await listActiveStoredSubscriptions();
+  return buildPayload({
+    result: partialResult,
+    feedUrls: activeSubscriptions.map((item) => item.feedUrl),
+    opml,
+    refreshPipeline: false,
+    includeContents: false
   });
 }
 

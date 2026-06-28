@@ -59,6 +59,7 @@ contextBridge.exposeInMainWorld('mercury', {
   importOpmlFile: (filePath: string, onProgress?: (progress: unknown) => void) =>
     invokeWithOpmlProgress('week2:import-opml-file', { filePath }, onProgress),
   previewOpmlText: (opmlText: string) => ipcRenderer.invoke('week2:preview-opml', opmlText),
+  getArticleContent: (articleId: string) => ipcRenderer.invoke('week2:get-article-content', articleId),
   updateArticleState: (input: { articleId: string; isRead?: boolean; isStarred?: boolean }) =>
     ipcRenderer.invoke('week2:update-article-state', input),
   updateFeedSubscription: (input: { feedId: string; isEnabled?: boolean; isDeleted?: boolean }) =>
