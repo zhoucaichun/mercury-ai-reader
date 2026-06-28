@@ -2633,6 +2633,9 @@ export function ReaderApp() {
         }
 
         if (progress.phase === 'syncing' || progress.phase === 'feed-succeeded' || progress.phase === 'feed-failed') {
+          if (progress.payload) {
+            applySyncPayload(progress.payload);
+          }
           setSyncStatus('running');
           setSyncMessage(
             `Syncing imported feeds ${progress.completed}/${progress.total}${

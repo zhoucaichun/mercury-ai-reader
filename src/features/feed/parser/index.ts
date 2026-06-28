@@ -11,7 +11,7 @@ const FALLBACK_SOURCE_URL = "https://example.invalid/feed.xml";
 
 export const week2FeedParser: Week2FeedParser = {
   async parseFeedUrl(feedUrl) {
-    return toWeek2ParsedFeed(await parseStandardFeedUrl(feedUrl));
+    return toWeek2ParsedFeed(await parseStandardFeedUrl(feedUrl, { timeoutMs: 8_000 }));
   },
   async parseFeedText(feedText, sourceUrl = FALLBACK_SOURCE_URL) {
     return toWeek2ParsedFeed(await parseStandardFeedText(feedText, sourceUrl));

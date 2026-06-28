@@ -169,17 +169,20 @@ async function buildPayload(input: {
   result: Week2SyncAllResult;
   feedUrls: string[];
   opml?: Week2FrontendSyncPayload['opml'];
+  refreshPipeline?: boolean;
 }): Promise<Week2FrontendSyncPayload> {
   const storage = getStorage();
   const pipeline = createReaderPipeline();
   const feeds = await storage.listFeeds();
   const articles = await storage.listArticles();
+  const refreshPipeline = input.refreshPipeline ?? true;
 
   const contents = (
     await Promise.all(
       articles.map(async (article) => {
         const content = await storage.getArticleContent(article.id);
         if (!content) return null;
+        if (!refreshPipeline) return content;
 
         const piped = await pipeline.runPipeline({
           articleId: article.id,
@@ -312,7 +315,8 @@ export async function importOpmlAndSync(
   const initialPayload = await buildPayload({
     result: emptyResult(),
     feedUrls: subscriptions.map((subscription) => subscription.feedUrl),
-    opml
+    opml,
+    refreshPipeline: false
   });
 
   options.onProgress?.({
@@ -375,6 +379,7 @@ async function syncImportedSubscriptionsInBackground(
   });
   const total = subscriptions.length;
   let completed = 0;
+  const results: Week2SyncAllResult['results'] = [];
 
   options.onProgress?.({
     jobId: options.jobId,
@@ -386,9 +391,29 @@ async function syncImportedSubscriptionsInBackground(
     message: `Syncing imported feeds 0/${total}.`
   });
 
-  const results = await mapWithConcurrency(subscriptions, 6, async (subscription) => {
+  await mapWithConcurrency(subscriptions, 6, async (subscription) => {
     const result = await syncService.syncFeed(subscription.id);
     completed += 1;
+    results.push(result);
+
+    const succeededCount = results.filter((item) => item.status === 'succeeded').length;
+    const failedCount = results.filter((item) => item.status === 'failed').length;
+    const partialResult: Week2SyncAllResult = {
+      status: failedCount === 0 ? 'succeeded' : succeededCount === 0 ? 'failed' : 'partial',
+      totalSubscriptions: total,
+      succeededCount,
+      failedCount,
+      totalSavedArticles: results.reduce((sum, item) => sum + item.savedCount, 0),
+      results: [...results]
+    };
+    const activeSubscriptions = await listActiveStoredSubscriptions();
+    const payload = await buildPayload({
+      result: partialResult,
+      feedUrls: activeSubscriptions.map((item) => item.feedUrl),
+      opml,
+      refreshPipeline: false
+    });
+
     options.onProgress?.({
       jobId: options.jobId,
       phase: result.status === 'succeeded' ? 'feed-succeeded' : 'feed-failed',
@@ -398,7 +423,8 @@ async function syncImportedSubscriptionsInBackground(
       skippedCount: opml.skippedCount,
       currentTitle: subscription.title,
       message: `Synced imported feeds ${completed}/${total}: ${subscription.title}`,
-      result
+      result,
+      payload
     });
     return result;
   });
