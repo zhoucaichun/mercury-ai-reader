@@ -2649,8 +2649,14 @@ export function ReaderApp() {
           applySyncPayload(progress.payload);
           setSyncStatus(progress.payload.result.status === 'failed' ? 'failed' : 'succeeded');
           setSyncMessage(copy.syncHelp);
+          const allFeedsFailed =
+            progress.total > 0 &&
+            progress.payload.result.succeededCount === 0 &&
+            progress.payload.result.totalSavedArticles === 0;
           showToast(
-            `Finished OPML background sync: ${progress.payload.result.succeededCount}/${progress.total} feed(s), saved ${progress.payload.result.totalSavedArticles} article(s).`,
+            allFeedsFailed
+              ? 'OPML subscriptions were imported, but no articles were synced. The feed hosts may be unreachable on this network.'
+              : `Finished OPML background sync: ${progress.payload.result.succeededCount}/${progress.total} feed(s), saved ${progress.payload.result.totalSavedArticles} article(s).`,
             progress.payload.result.status === 'failed' ? 'failed' : 'succeeded'
           );
         }
