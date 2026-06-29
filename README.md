@@ -1,50 +1,50 @@
 # Prism Reader
 
-Prism Reader is a local-first, cross-platform AI feed reader built as a course team project. It supports RSS / Atom subscriptions, OPML import, real article synchronization, local storage, reader-focused content display, AI summary and translation, usage tracking, and single-article Markdown export.
+Prism Reader 是一个本地优先、跨平台的 AI Feed 阅读器课程项目。它支持 RSS / Atom 订阅、OPML 导入、真实文章同步、本地存储、阅读内容清洗、AI 摘要与翻译、模型用量统计，以及单篇 Markdown 导出。
 
-The application does not require user registration or login. Subscriptions, articles, reading state, notes, AI results, usage records, and model settings are stored on the user's device. In the desktop application, API keys are encrypted with Electron `safeStorage`; real keys are not committed to the repository or uploaded to a server.
+项目不要求用户注册或登录。订阅源、文章、阅读状态、笔记、AI 结果、用量记录和模型配置优先保存在用户本机。桌面端 API Key 使用 Electron `safeStorage` 加密保存，不提交到仓库，也不会上传到服务器。
 
-## Current Features
+## 当前功能
 
-- Feed subscriptions: add a Feed URL, synchronize real RSS / Atom articles, import OPML files, enable, disable, and delete subscriptions.
-- Article synchronization: fetch real articles, deduplicate feeds and entries, store article list and article content locally.
-- Reader UI: three-column layout for subscriptions, article list, and reading view, with responsive panels and reading settings.
-- Content pipeline: keeps `sourceHtml`, `cleanedHtml`, and `canonicalMarkdown` as the shared content layers for reading, AI, and export.
-- AI summary: generate summaries from the current article and reuse saved results when available instead of repeatedly calling the model.
-- AI translation: support full-article translation, selected-text translation, bilingual paragraph display, and progress feedback.
-- Provider settings: save multiple OpenAI-compatible model configurations, choose default models for summary and translation, delete saved profiles, and test connectivity.
-- Usage tracking: record purpose, provider, model, token usage, status, and latency for AI calls.
-- Markdown export: export the current article, with optional summary and translation content.
-- Reader enhancements: themes, read/unread and saved states, tags, reading progress, highlights, underlines, notes, and AI history.
+- 订阅源管理：支持输入 Feed URL 同步真实 RSS / Atom 文章，支持 OPML 批量导入，支持订阅源启用、停用和删除。
+- 文章同步：支持真实文章抓取、Feed 去重、文章去重、文章列表和正文内容本地保存。
+- 阅读器界面：三栏布局，包括订阅源列表、文章列表和阅读区，支持面板收起、宽度调整和阅读设置。
+- 内容清洗：保存 `sourceHtml`、`cleanedHtml` 和 `canonicalMarkdown`，为阅读、摘要、翻译和导出提供统一正文输入。
+- AI 摘要：基于当前文章生成摘要；已有摘要再次点击时优先查看历史结果，避免重复调用模型。
+- AI 翻译：支持整篇翻译、划词翻译、中英对照阅读和生成进度反馈。
+- 模型配置：支持 OpenAI-compatible API；可保存多个模型配置，为摘要和翻译分别选择默认模型，并支持连接测试和删除配置。
+- Usage 统计：记录 AI 调用目的、Provider、Model、Token、状态和耗时。
+- Markdown 导出：支持导出当前文章，可包含正文、摘要和译文。
+- 阅读增强：支持主题、已读/未读、收藏、标签、阅读进度、高亮、下划线、笔记和 AI 历史记录。
 
-## Download
+## 下载运行
 
-Windows x64 release:
+Windows x64 打包版本：
 
 https://github.com/zhoucaichun/mercury-ai-reader/releases/tag/v0.1.0-prism-reader
 
-Download `Prism.Reader-0.1.0-Windows-x64.zip`, unzip it, and run:
+下载 `Prism.Reader-0.1.0-Windows-x64.zip` 后解压，双击运行：
 
 ```text
 Prism Reader.exe
 ```
 
-Notes:
+说明：
 
-- The current public release provides a Windows x64 zip package.
-- macOS and Linux targets are reserved in the build configuration and can be built from source.
-- If Windows shows a security warning for the unsigned course project build, choose "Run anyway".
+- 当前公开 Release 提供 Windows x64 zip 包。
+- macOS 和 Linux 的构建目标已在配置中预留，可基于源码构建。
+- 如果 Windows 首次打开时出现未签名应用安全提示，请选择“仍要运行”。这是课程项目未签名构建的常见提示。
 
-## Basic Usage
+## 基本使用
 
-1. Open Prism Reader.
-2. Enter a Feed URL and click sync, or leave the input empty to sync the default real feeds.
-3. Use OPML import to add multiple subscriptions from a `.opml` file.
-4. Select a subscription and an article to read the cleaned content.
-5. Configure an OpenAI-compatible model in settings if AI summary or translation is needed.
-6. Use summary, translation, selected-text translation, notes, highlights, tags, usage, and Markdown export from the reader page.
+1. 打开 Prism Reader。
+2. 在左侧输入 Feed URL 并点击同步；也可以留空同步默认真实订阅源。
+3. 如需批量导入订阅源，点击 OPML 导入按钮并选择 `.opml` 文件。
+4. 在中间文章列表选择文章，在右侧阅读正文。
+5. 如需使用 AI 摘要或翻译，在设置中配置 OpenAI-compatible 模型服务。
+6. 在阅读页使用摘要、翻译、划词翻译、笔记、高亮、标签、Usage 和 Markdown 导出功能。
 
-Test Feed examples:
+可测试 Feed 示例：
 
 ```text
 https://www.ruanyifeng.com/blog/atom.xml
@@ -52,168 +52,168 @@ https://blog.mozilla.org/en/feed/
 https://xkcd.com/atom.xml
 ```
 
-OPML examples are available in:
+OPML 测试文件位于：
 
 ```text
 test-opml/
 ```
 
-## AI Model Configuration
+## AI 模型配置
 
-Prism Reader uses OpenAI-compatible APIs. Common examples:
+Prism Reader 使用 OpenAI-compatible API 调用模型。常见配置示例：
 
-| Provider | Base URL Example | Model Example | API Key |
+| Provider | Base URL 示例 | Model 示例 | API Key |
 | --- | --- | --- | --- |
-| OpenAI-compatible service | `https://api.example.com/v1` | Provided by service | Provided by service |
+| OpenAI-compatible 服务 | `https://api.example.com/v1` | 服务方提供 | 服务方提供 |
 | DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` | DeepSeek API Key |
-| Local Ollama | `http://localhost:11434/v1` | `qwen2.5:7b` | Any non-empty placeholder |
+| 本地 Ollama | `http://localhost:11434/v1` | `qwen2.5:7b` | 任意非空占位值 |
 
-API keys are stored only on the current device. The desktop build encrypts saved keys through Electron `safeStorage`; browser preview mode is only a development fallback.
+API Key 只保存在当前设备。桌面端会通过 Electron `safeStorage` 加密保存；浏览器预览模式仅作为开发 fallback 使用。
 
-## Tech Stack
+## 技术栈
 
-- Electron: cross-platform desktop shell.
-- React: user interface.
-- TypeScript: typed contracts and implementation.
-- Vite: development and build tooling.
-- SQLite / better-sqlite3: local-first storage.
-- rss-parser: RSS / Atom parsing.
-- OpenAI-compatible API: unified model provider interface.
-- lucide-react: UI icons.
+- Electron：跨平台桌面应用。
+- React：前端 UI。
+- TypeScript：统一类型和接口。
+- Vite：开发与构建工具。
+- SQLite / better-sqlite3：本地优先数据存储。
+- rss-parser：RSS / Atom Feed 解析。
+- OpenAI-compatible API：统一接入远程模型和本地模型。
+- lucide-react：界面图标。
 
-## Project Structure
+## 项目结构
 
 ```text
-electron/                         Electron main process, preload, storage and AI IPC
+electron/                         Electron 主进程、preload、本地存储和 AI IPC
 src/
-  app/                            React application entry
-  core/                           Shared types, database stores, adapters, and seed data
+  app/                            React 应用入口
+  core/                           公共类型、数据库 stores、适配器和种子数据
   features/
     feed/
-      parser/                     RSS / Atom parser
-      opml/                       OPML parsing
-      subscriptions/              Subscription management
-      sync/                       Feed sync, deduplication, and storage integration
-    reader/                       Reader UI and reader data port
-      pipeline/                   Content cleaning pipeline
+      parser/                     RSS / Atom 解析
+      opml/                       OPML 解析
+      subscriptions/              订阅源管理
+      sync/                       Feed 同步、去重和存储集成
+    reader/                       阅读器 UI 和 ReaderDataPort
+      pipeline/                   内容清洗 pipeline
     agent/
-      runtime/                    Agent runtime contracts
-      prompts/                    Prompt loading and rendering
-      providers/                  LLM provider configuration and calls
-      summary/                    Summary agent
-      translation/                Translation agent
-    usage/                        LLM usage records and aggregation
-    export/                       Single-article Markdown export
-  styles/                         Global styles
-resources/prompts/                Prompt templates
-docs/features/                    Feature design and module documentation
-docs/reports/                     Module progress and validation reports
-task-documents/                   Formal project planning and technical documents
-test-opml/                        OPML files for import testing
+      runtime/                    Agent Runtime 契约
+      prompts/                    Prompt 加载和渲染
+      providers/                  LLM Provider 配置和调用
+      summary/                    Summary Agent
+      translation/                Translation Agent
+    usage/                        LLM Usage 记录和统计
+    export/                       单篇 Markdown 导出
+  styles/                         全局样式
+resources/prompts/                Prompt 模板资源
+docs/features/                    功能设计和模块文档
+docs/reports/                     模块进度和验证报告
+task-documents/                   正式项目计划和技术文档
+test-opml/                        OPML 导入测试文件
 ```
 
-## Team Contributions
+## 成员分工与仓库留痕
 
-| Member | Responsibility | Repository Evidence |
+| 成员 | 负责内容 | 仓库留痕 |
 | --- | --- | --- |
-| T0 周彩纯 | Project management, integration, testing, release packaging, documentation | `README.md`, `AGENTS.md`, `task-documents/`, release assets, integration commits |
-| T1 张珈鸣 | Project skeleton, Electron / React / Vite setup, build scripts | `package.json`, `electron/`, `src/app/`, `src/main.tsx`, `vite.config.ts` |
-| T2 林杨 | Data model, SQLite storage, stores, storage adapters | `src/core/database/`, `docs/features/T2-data-model.md` |
-| T3 周康 | Feed URL adding, RSS / Atom parser, parser tests and reports | `src/features/feed/parser/`, `test/`, `docs/features/T3-feed-parser.md`, `docs/reports/T3-*` |
-| T4 李欣然 | OPML import and subscription management | `src/features/feed/opml/`, `src/features/feed/subscriptions/`, `docs/features/T4-opml-subscriptions.md`, `test-opml/` |
-| T5 夏培玮 | Feed synchronization, article deduplication, Week 2 smoke chain | `src/features/feed/sync/`, `docs/features/T5-sync-design.md` |
-| T6 杜茗天 | Reader pipeline, cleaned content and canonical Markdown | `src/features/reader/pipeline/`, `docs/features/T6-reader-pipeline.md`, `docs/features/T6-reader-pipeline-fixtures/` |
-| T7 余婧 | Reader UI, interaction design, themes, notes, highlights, reading states | `src/features/reader/`, `docs/features/T7-reader-ui-plan.md`, `docs/features/T7-ux-review-checklist.md` |
-| T8 曾夏杨 | Agent runtime, prompt loading, shared AI task state | `src/features/agent/runtime/`, `src/features/agent/prompts/`, `docs/features/T8-agent-runtime.md` |
-| T9 蔡钦楠 | LLM providers, model configuration, usage records and settings panel | `src/features/agent/providers/`, `src/features/usage/`, `docs/features/T9-llm-provider-usage.md` |
-| T10 宋金淼 | Summary agent, summary result contract and tests | `src/features/agent/summary/`, `docs/features/T10-summary-agent.md` |
-| T11 余富康 | Translation agent and single-article Markdown export | `src/features/agent/translation/`, `src/features/export/`, `docs/features/T11-translation-export.md` |
+| T0 周彩纯 | 项目管理、集成测试、打包发布、仓库文档整理 | `README.md`、`AGENTS.md`、`task-documents/`、Release、集成提交 |
+| T1 张珈鸣 | 项目骨架、Electron / React / Vite 初始化、构建脚本 | `package.json`、`electron/`、`src/app/`、`src/main.tsx`、`vite.config.ts` |
+| T2 林杨 | 数据模型、SQLite 本地存储、stores、Storage Adapter | `src/core/database/`、`docs/features/T2-data-model.md` |
+| T3 周康 | Feed URL 添加、RSS / Atom Parser、解析测试和报告 | `src/features/feed/parser/`、`test/`、`docs/features/T3-feed-parser.md`、`docs/reports/T3-*` |
+| T4 李欣然 | OPML 导入、订阅源管理 | `src/features/feed/opml/`、`src/features/feed/subscriptions/`、`docs/features/T4-opml-subscriptions.md`、`test-opml/` |
+| T5 夏培玮 | Feed 同步、文章去重、Week 2 主链路 smoke 测试 | `src/features/feed/sync/`、`docs/features/T5-sync-design.md` |
+| T6 杜茗天 | Reader Pipeline、内容清洗、canonical Markdown | `src/features/reader/pipeline/`、`docs/features/T6-reader-pipeline.md`、`docs/features/T6-reader-pipeline-fixtures/` |
+| T7 余婧 | 阅读器 UI、交互设计、主题、笔记、高亮、阅读状态 | `src/features/reader/`、`docs/features/T7-reader-ui-plan.md`、`docs/features/T7-ux-review-checklist.md` |
+| T8 曾夏杨 | Agent Runtime、Prompt 加载、AI 任务状态 | `src/features/agent/runtime/`、`src/features/agent/prompts/`、`docs/features/T8-agent-runtime.md` |
+| T9 蔡钦楠 | LLM Provider、模型配置、Usage 记录和设置面板 | `src/features/agent/providers/`、`src/features/usage/`、`docs/features/T9-llm-provider-usage.md` |
+| T10 宋金淼 | Summary Agent、摘要结果契约和测试 | `src/features/agent/summary/`、`docs/features/T10-summary-agent.md` |
+| T11 余富康 | Translation Agent、单篇 Markdown 导出 | `src/features/agent/translation/`、`src/features/export/`、`docs/features/T11-translation-export.md` |
 
-## Local Development
+## 本地开发
 
-Requirements:
+环境要求：
 
 - Node.js 24.x
 - npm 11.x
 - Git
 
-Install dependencies:
+安装依赖：
 
 ```bash
 npm install
 ```
 
-Run the desktop application in development mode:
+启动桌面端开发模式：
 
 ```bash
 npm run dev
 ```
 
-Run only the renderer preview:
+只启动浏览器预览：
 
 ```bash
 npm run dev:renderer
 ```
 
-Build:
+构建：
 
 ```bash
 npm run build
 ```
 
-Start the built desktop application:
+运行构建后的桌面应用：
 
 ```bash
 npm run start
 ```
 
-## Tests And Validation
+## 测试与验证
 
-Run unit tests:
+运行单元测试：
 
 ```bash
 npm test
 ```
 
-Validate Feed parsing:
+验证 Feed 解析：
 
 ```bash
 npm run smoke:feed
 ```
 
-Validate the main Feed sync chain:
+验证 Feed 同步主链路：
 
 ```bash
 npm run smoke:week2
 ```
 
-`smoke:week2` synchronizes real feeds, writes feeds / articles / article content, verifies `getArticleContent(articleId)`, and checks that repeated syncs do not create duplicate feeds or articles.
+`smoke:week2` 会同步真实 Feed，写入 feeds / articles / article content，验证 `getArticleContent(articleId)`，并检查重复同步不会产生重复订阅源或重复文章。
 
-Build Windows zip:
+Windows zip 打包：
 
 ```bash
 npm run pack:win:zip
 ```
 
-The generated package is placed under:
+打包产物位于：
 
 ```text
 release/Prism Reader-0.1.0-Windows-x64.zip
 ```
 
-## Privacy And Security
+## 隐私与安全
 
-- No registration or login is required.
-- The app does not proactively upload subscriptions, articles, reading records, notes, or AI results.
-- Article data, reading state, AI results, and usage records are stored locally first.
-- Desktop API keys are encrypted with Electron `safeStorage`.
-- Real API keys are not committed to the repository.
-- Example configuration uses placeholders only.
+- 不要求用户注册或登录。
+- 不主动上传订阅源、文章、阅读记录、笔记或 AI 结果。
+- 文章数据、阅读状态、AI 结果和 usage 记录优先保存在本地。
+- 桌面端 API Key 使用 Electron `safeStorage` 加密保存。
+- 真实 API Key 不提交到仓库。
+- 示例配置只使用占位符，不写真实密钥。
 
-## Project Documents
+## 项目文档
 
-- [AGENTS.md](AGENTS.md): shared coding contracts, data contracts, directory rules, and AI integration rules.
-- [Feature documents](docs/features): module-level design and implementation notes.
-- [Reports](docs/reports): parser progress and validation reports.
-- [Technical stack](task-documents/mercury-tech-stack.md): selected technology stack and rationale.
-- [Integration plan](task-documents/mercury-four-week-integration-plan.md): four-week project integration and validation plan.
+- [AGENTS.md](AGENTS.md)：公共代码约束、数据契约、目录规则和 AI 集成规则。
+- [功能文档](docs/features)：各模块设计与实现说明。
+- [报告文档](docs/reports)：模块进度与验证记录。
+- [技术栈说明](task-documents/mercury-tech-stack.md)：项目技术选型与原因。
+- [集成计划](task-documents/mercury-four-week-integration-plan.md)：四周集成计划与验收范围。
