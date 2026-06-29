@@ -9,6 +9,7 @@ import type {
   Week2ParsedArticle,
   Week2StoragePort
 } from '../src/features/feed/sync/index.js';
+import { createFeedIdentityKey } from '../src/features/feed/feedIdentity.js';
 
 type JsonState = {
   feeds: Week2Feed[];
@@ -45,14 +46,77 @@ export function createJsonWeek2StoragePort(userDataPath: string): Week2StoragePo
     fs.writeFileSync(databasePath, JSON.stringify(state, null, 2), 'utf8');
   }
 
+  function compactDuplicateFeeds(state: JsonState): boolean {
+    const groups = new Map<string, Week2Feed[]>();
+
+    for (const feed of state.feeds) {
+      const key = createFeedIdentityKey(feed.feedUrl);
+      if (!key) continue;
+      groups.set(key, [...(groups.get(key) ?? []), feed]);
+    }
+
+    const duplicateGroups = [...groups.values()].filter((group) => group.length > 1);
+    if (duplicateGroups.length === 0) return false;
+
+    for (const group of duplicateGroups) {
+      const ranked = [...group].sort((a, b) => {
+        const articleDiff = countArticlesForFeed(state, b.id) - countArticlesForFeed(state, a.id);
+        if (articleDiff !== 0) return articleDiff;
+
+        const bTime = Date.parse(b.lastSyncedAt ?? '') || 0;
+        const aTime = Date.parse(a.lastSyncedAt ?? '') || 0;
+        if (bTime !== aTime) return bTime - aTime;
+
+        return Number(a.id) - Number(b.id);
+      });
+      const canonical = ranked[0];
+      const duplicates = ranked.slice(1);
+
+      for (const duplicate of duplicates) {
+        if (!canonical.siteUrl && duplicate.siteUrl) canonical.siteUrl = duplicate.siteUrl;
+        if (!canonical.title && duplicate.title) canonical.title = duplicate.title;
+        if (isNewerIso(duplicate.lastSyncedAt, canonical.lastSyncedAt)) {
+          canonical.lastSyncedAt = duplicate.lastSyncedAt;
+        }
+
+        for (const article of state.articles.filter((item) => item.feedId === duplicate.id)) {
+          const existing = state.articles.find(
+            (item) =>
+              item.feedId === canonical.id &&
+              item.id !== article.id &&
+              item.url &&
+              article.url &&
+              item.url === article.url
+          );
+
+          if (existing) {
+            state.articles = state.articles.filter((item) => item.id !== article.id);
+            state.contents = state.contents.filter((content) => content.articleId !== article.id);
+          } else {
+            article.feedId = canonical.id;
+          }
+        }
+
+        state.feeds = state.feeds.filter((feed) => feed.id !== duplicate.id);
+      }
+    }
+
+    return true;
+  }
+
   const port: Week2StoragePort & { databasePath: string } = {
     databasePath,
 
     async saveFeeds(feeds) {
       const state = readState();
+      compactDuplicateFeeds(state);
       const now = new Date().toISOString();
       const saved = feeds.map((feed) => {
-        const existing = state.feeds.find((item) => item.feedUrl === feed.feedUrl);
+        const feedKey = createFeedIdentityKey(feed.feedUrl);
+        const existing = state.feeds.find((item) => {
+          const itemKey = createFeedIdentityKey(item.feedUrl);
+          return feedKey && itemKey ? itemKey === feedKey : item.feedUrl === feed.feedUrl;
+        });
         if (existing) {
           Object.assign(existing, {
             title: feed.title || existing.title,
@@ -83,6 +147,8 @@ export function createJsonWeek2StoragePort(userDataPath: string): Week2StoragePo
 
     async listFeeds() {
       const state = readState();
+      const changed = compactDuplicateFeeds(state);
+      if (changed) writeState(state);
       return state.feeds
         .filter((feed) => feed.isEnabled !== false)
         .map((feed) => ({
@@ -216,6 +282,16 @@ export function createJsonWeek2StoragePort(userDataPath: string): Week2StoragePo
   };
 
   return port;
+}
+
+function countArticlesForFeed(state: JsonState, feedId: string): number {
+  return state.articles.filter((article) => article.feedId === feedId).length;
+}
+
+function isNewerIso(candidate?: string, current?: string): boolean {
+  const candidateTime = Date.parse(candidate ?? '') || 0;
+  const currentTime = Date.parse(current ?? '') || 0;
+  return candidateTime > currentTime;
 }
 
 function stripHtmlTags(html: string): string {

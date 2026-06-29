@@ -18,6 +18,7 @@ import { createReaderPipeline } from '../src/features/reader/pipeline/index.js';
 import { createWeek2StoragePort, initDatabase } from '../src/core/database/index.js';
 import { createJsonWeek2StoragePort } from './json-week2-storage.js';
 import fs from 'node:fs/promises';
+import { createFeedIdentityKey } from '../src/features/feed/feedIdentity.js';
 
 const DEFAULT_FEED_URLS = [
   'https://www.ruanyifeng.com/blog/atom.xml',
@@ -280,20 +281,24 @@ export async function importOpmlAndSync(
 
   const storage = getStorage();
   const existingFeeds = await storage.listFeeds();
-  const existingFeedUrls = new Set(existingFeeds.map((feed) => (feed.feedUrl ?? '').toLowerCase()));
+  const existingFeedKeys = new Set(
+    existingFeeds
+      .map((feed) => createFeedIdentityKey(feed.feedUrl))
+      .filter((key): key is string => Boolean(key))
+  );
 
   const importableSubscriptions: Week2Subscription[] = [];
   const skippedMessages: string[] = parsed.issues.map((issue) => issue.message);
 
   for (const subscription of parsed.subscriptions) {
-    const dedupeKey = (subscription.feedUrl ?? '').toLowerCase();
+    const dedupeKey = createFeedIdentityKey(subscription.feedUrl);
 
-    if (existingFeedUrls.has(dedupeKey)) {
+    if (dedupeKey && existingFeedKeys.has(dedupeKey)) {
       skippedMessages.push(`Skipped duplicate subscription "${subscription.title}".`);
       continue;
     }
 
-    existingFeedUrls.add(dedupeKey);
+    if (dedupeKey) existingFeedKeys.add(dedupeKey);
     importableSubscriptions.push(subscription);
   }
 

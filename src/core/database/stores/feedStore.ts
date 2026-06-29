@@ -42,7 +42,7 @@ export function createFeedStore(db: Database.Database): IFeedStore {
 
     for (const [key, value] of Object.entries(partial)) {
       sets.push(`${key} = ?`);
-      values.push(value);
+      values.push(key === 'isEnabled' && typeof value === 'boolean' ? (value ? 1 : 0) : value);
     }
 
     if (sets.length === 0) {

@@ -11,6 +11,7 @@ import type {
 import { createFeedStore } from './stores/feedStore';
 import { createEntryStore } from './stores/entryStore';
 import { createContentStore } from './stores/contentStore';
+import { createFeedIdentityKey } from '../../features/feed/feedIdentity';
 
 /**
  * Week2StoragePort 适配器
@@ -88,18 +89,24 @@ export function createWeek2StoragePort(db: Database.Database): Week2StoragePort 
 
   return {
     async saveFeeds(feeds: Week2Feed[]): Promise<Week2Feed[]> {
+      compactDuplicateFeedsOnce();
       const results: Week2Feed[] = [];
 
       for (const f of feeds) {
-        // If the feed has an existing numeric id, update it; otherwise create
-        const existing = f.id && f.id !== 'auto'
-          ? feedStore.getByUrl(f.feedUrl)
-          : null;
+        const feedKey = createFeedIdentityKey(f.feedUrl);
+        const existing = feedStore.getAll().find((feed) => {
+          const existingKey = createFeedIdentityKey(feed.feedUrl);
+          return feedKey && existingKey ? feedKey === existingKey : feed.feedUrl === f.feedUrl;
+        }) ?? null;
 
         if (existing) {
-          if (f.title) feedStore.update(existing.id, { title: f.title });
-          if (f.siteUrl) feedStore.update(existing.id, { siteUrl: f.siteUrl });
-          results.push(mapFeedToWeek2(existing, entryStore.getUnreadCount(existing.id)));
+          const updated = feedStore.update(existing.id, {
+            title: f.title || existing.title,
+            siteUrl: f.siteUrl ?? existing.siteUrl,
+            lastFetchedAt: f.lastSyncedAt ?? existing.lastFetchedAt,
+            isEnabled: f.isEnabled ?? Boolean(existing.isEnabled),
+          });
+          results.push(mapFeedToWeek2(updated, entryStore.getUnreadCount(updated.id)));
         } else {
           const created = feedStore.upsert({
             title: f.title ?? null,
@@ -329,21 +336,7 @@ function createFeedDedupeKey(feed: {
   feedUrl: string;
   siteUrl: string | null;
 }): string | null {
-  const title = (feed.title ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
-  const host = getUrlHost(feed.siteUrl) ?? getUrlHost(feed.feedUrl);
-
-  if (!title || !host) return null;
-  return `${host}::${title}`;
-}
-
-function getUrlHost(value?: string | null): string | null {
-  if (!value) return null;
-
-  try {
-    return new URL(value).hostname.replace(/^www\./, '').toLowerCase();
-  } catch {
-    return null;
-  }
+  return createFeedIdentityKey(feed.feedUrl);
 }
 
 function mapEntryToWeek2Article(entry: {

@@ -45,6 +45,7 @@ import type {
 } from '../../core/types';
 import { formatTokenCount, summarizeUsage } from '../usage/usage';
 import type { LLMUsageEvent } from '../usage/types';
+import { createFeedIdentityKey } from '../feed/feedIdentity';
 import {
   activateReaderLLMProviderProfile,
   createBrowserWeek3AgentUiPort,
@@ -2607,7 +2608,13 @@ export function ReaderApp() {
         if (progress.phase === 'feed-imported' && progress.feed) {
           setFeedsStatus('ready');
           setFeeds((currentFeeds) => {
-            if (currentFeeds.some((feed) => feed.id === progress.feed!.id || feed.feedUrl === progress.feed!.feedUrl)) {
+            const progressKey = createFeedIdentityKey(progress.feed!.feedUrl);
+            if (currentFeeds.some((feed) => {
+              const currentKey = createFeedIdentityKey(feed.feedUrl);
+              return feed.id === progress.feed!.id ||
+                feed.feedUrl === progress.feed!.feedUrl ||
+                Boolean(progressKey && currentKey && progressKey === currentKey);
+            })) {
               return currentFeeds;
             }
             return [...currentFeeds, progress.feed!];
