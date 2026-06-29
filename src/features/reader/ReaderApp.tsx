@@ -2565,7 +2565,7 @@ export function ReaderApp() {
     }
 
     setSyncStatus('running');
-    setSyncMessage(feedUrl ? `${copy.syncing} ${feedUrl}...` : `${copy.syncing}...`);
+    setSyncMessage(feedUrl ? `${copy.syncing} ${feedUrl}...` : `${copy.syncing} default feeds...`);
     setFeeds((currentFeeds) => currentFeeds.map((feed) => ({ ...feed, status: 'syncing' })));
 
     try {

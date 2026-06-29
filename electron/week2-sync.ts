@@ -216,32 +216,30 @@ async function buildPayload(input: {
 
 export async function runWeek2Sync(feedUrls?: string[]): Promise<Week2FrontendSyncPayload> {
   const normalizedFeedUrls = normalizeFeedUrls(feedUrls);
+  const isExplicitFeedSync = Boolean(feedUrls?.length);
 
   if (normalizedFeedUrls.length === 0) {
     throw new Error('Please enter a valid http/https Feed URL.');
   }
 
-  if (feedUrls?.length) {
-    const now = new Date().toISOString();
-    await getStorage().saveFeeds(
-      normalizedFeedUrls.map((feedUrl) => ({
-        id: 'auto',
-        title: toFeedTitle(feedUrl),
-        feedUrl,
-        siteUrl: undefined,
-        unreadCount: 0,
-        status: 'ready',
-        lastSyncedAt: now,
-        isEnabled: true
-      }))
-    );
-  }
+  const now = new Date().toISOString();
+  await getStorage().saveFeeds(
+    normalizedFeedUrls.map((feedUrl) => ({
+      id: 'auto',
+      title: toFeedTitle(feedUrl),
+      feedUrl,
+      siteUrl: undefined,
+      unreadCount: 0,
+      status: 'ready',
+      lastSyncedAt: undefined,
+      isEnabled: true
+    }))
+  );
 
-  const storedSubscriptions = await listActiveStoredSubscriptions();
-  const subscriptions =
-    feedUrls?.length || storedSubscriptions.length > 0
-      ? storedSubscriptions
-      : await createSubscriptionProvider(normalizedFeedUrls, 'manual').listActiveSubscriptions();
+  const subscriptions = await createSubscriptionProvider(
+    normalizedFeedUrls,
+    isExplicitFeedSync ? 'manual' : 'mock'
+  ).listActiveSubscriptions();
 
   const syncService = createSyncService({
     subscriptionProvider: createStaticSubscriptionProvider(subscriptions),
