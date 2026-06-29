@@ -1,106 +1,130 @@
-# Prism Reader Four-Week Integration Plan
+# Prism Reader 四周集成计划与验收记录
 
-This document records the project schedule, integration milestones, and final validation scope for Prism Reader.
+本文档记录 Prism Reader 的四周集成节奏、阶段成果和最终验收范围。
 
-## Integration Strategy
+## 1. 集成策略
 
-The project was organized as a four-week team integration cycle:
+项目按照四周节奏推进：
 
 ```text
-Week 1: project setup, technical stack, interfaces, and reader prototype
-Week 2: real Feed / OPML / sync / storage / article-list main chain
-Week 3: AI summary, translation, usage, export, and reader interaction integration
-Week 4: final testing, bug fixing, documentation, packaging, and release
+Week 1：项目骨架、技术栈、接口契约和阅读器原型
+Week 2：真实 Feed / OPML / Sync / 本地存储 / 文章列表主链路
+Week 3：AI 摘要、翻译、Usage、Export 和阅读器交互集成
+Week 4：最终测试、问题修复、文档整理、打包和 Release
 ```
 
-The main branch should remain buildable and testable. Shared contracts are defined in `AGENTS.md`, and feature evidence is kept in `docs/features/`, `docs/reports/`, and source directories.
+集成原则：
 
-## Week 1: Setup And Contracts
+- `main` 分支保持可构建、可测试、可打包；
+- 公共接口以 `AGENTS.md` 为准；
+- 成员产出需要在代码、文档、测试或报告中留痕；
+- 最终提交必须包含可直接运行的桌面端打包版本；
+- 不提交真实 API Key、个人路径、内部草稿、`.docx` 或系统临时文件。
 
-Goals:
+## 2. Week 1：项目骨架与接口草案
 
-- choose the technical stack;
-- create the Electron / React / TypeScript / Vite project skeleton;
-- define module directories and shared data contracts;
-- prepare reader UI prototype and module design documents.
+阶段目标：
 
-Delivered evidence:
+- 确定技术栈；
+- 建立 Electron / React / TypeScript / Vite 项目骨架；
+- 明确模块目录和公共数据结构；
+- 准备阅读器 UI 原型；
+- 形成各模块设计文档。
 
-- `package.json`, `electron/`, `src/app/`, `src/main.tsx`;
-- `AGENTS.md`;
-- `docs/features/T2-data-model.md`;
-- `docs/features/T3-feed-parser.md`;
-- `docs/features/T6-reader-pipeline.md`;
-- `docs/features/T7-reader-ui-plan.md`;
-- `docs/features/T8-agent-runtime.md`;
-- `docs/features/T9-llm-provider-usage.md`;
-- `docs/features/T10-summary-agent.md`;
-- `docs/features/T11-translation-export.md`.
+完成成果：
 
-## Week 2: Main Feed Chain
+- 项目骨架：`package.json`、`electron/`、`src/app/`、`src/main.tsx`；
+- 公共约束：`AGENTS.md`；
+- 数据模型文档：`docs/features/T2-data-model.md`；
+- Feed Parser 文档：`docs/features/T3-feed-parser.md`；
+- Reader Pipeline 文档：`docs/features/T6-reader-pipeline.md`；
+- Reader UI 原型与审查清单：`docs/features/T7-*`；
+- Agent Runtime、Provider、Summary、Translation / Export 文档：`docs/features/T8-*` 至 `docs/features/T11-*`。
 
-Goals:
+## 3. Week 2：真实 Feed 主链路
 
-- parse real RSS / Atom feeds;
-- support OPML parsing and subscription management;
-- synchronize real articles into the local storage contract;
-- expose feed and article data to the reader page;
-- provide a smoke test for the main chain.
+阶段目标：
 
-Delivered evidence:
+- 解析真实 RSS / Atom Feed；
+- 支持 OPML 解析和订阅源管理；
+- 将真实文章同步到本地存储契约；
+- 将 Feed 和 Article 数据展示到阅读器页面；
+- 提供主链路 smoke 测试。
 
-- `src/features/feed/parser/`;
-- `src/features/feed/opml/`;
-- `src/features/feed/subscriptions/`;
-- `src/features/feed/sync/`;
-- `src/core/database/`;
-- `electron/week2-sync.ts`;
-- `test-opml/`;
-- `npm run smoke:week2`.
+完成成果：
 
-Validation:
+- Feed Parser：`src/features/feed/parser/`；
+- OPML：`src/features/feed/opml/`；
+- Subscription：`src/features/feed/subscriptions/`；
+- Sync：`src/features/feed/sync/`；
+- 本地数据库：`src/core/database/`；
+- Electron 主链路 IPC：`electron/week2-sync.ts`；
+- OPML 测试文件：`test-opml/`；
+- 主链路验证命令：`npm run smoke:week2`。
 
-```bash
-npm run smoke:week2
-```
+验证内容：
 
-The smoke test verifies real feed synchronization, feed storage, article storage, article content availability, and duplicate prevention.
+- 能同步真实 Feed；
+- 能写入 feed / article / article content；
+- 能读取非空正文；
+- 重复同步不会产生重复 feed 或重复文章。
 
-## Week 3: AI, Export, Usage, And Reader Integration
+## 4. Week 3：AI、Export、Usage 与阅读器集成
 
-Goals:
+阶段目标：
 
-- connect summary and translation to the reader page;
-- support OpenAI-compatible provider configuration;
-- save multiple model profiles and choose defaults for summary and translation;
-- record usage events;
-- export the current article as Markdown;
-- improve reader interaction states, reading progress, highlights, notes, tags, and AI history.
+- 摘要和翻译接入阅读器页面；
+- 支持 OpenAI-compatible Provider 配置；
+- 支持多个模型配置保存和切换；
+- 摘要和翻译可分别选择默认模型；
+- 记录 usage event；
+- 当前文章可导出 Markdown；
+- 改善阅读器交互状态和产品体验。
 
-Delivered evidence:
+完成成果：
 
-- `src/features/agent/runtime/`;
-- `src/features/agent/prompts/`;
-- `src/features/agent/providers/`;
-- `src/features/agent/summary/`;
-- `src/features/agent/translation/`;
-- `src/features/usage/`;
-- `src/features/export/`;
-- `src/features/reader/ReaderApp.tsx`;
-- `electron/week3-ai.ts`;
-- `electron/secure-provider-store.ts`.
+- Agent Runtime：`src/features/agent/runtime/`；
+- Prompt：`src/features/agent/prompts/` 和 `resources/prompts/`；
+- Provider：`src/features/agent/providers/`；
+- Summary：`src/features/agent/summary/`；
+- Translation：`src/features/agent/translation/`；
+- Usage：`src/features/usage/`；
+- Export：`src/features/export/`；
+- Reader UI：`src/features/reader/ReaderApp.tsx`；
+- AI IPC：`electron/week3-ai.ts`；
+- API Key 安全存储：`electron/secure-provider-store.ts`。
 
-## Week 4: Final Validation And Release
+交互与产品化成果：
 
-Goals:
+- 已读 / 未读 / 收藏状态；
+- 标签、笔记、高亮、下划线；
+- 阅读进度；
+- 摘要和译文历史保留；
+- streaming 生成反馈；
+- 设置中查看、切换、删除模型配置；
+- Usage 面板展示调用记录和统计。
 
-- clean repository documents;
-- verify feature evidence for each member;
-- fix final product issues found during testing;
-- build and upload the Windows release package;
-- keep release notes and README usable for review.
+## 5. Week 4：最终验证与 Release
 
-Final validation commands:
+阶段目标：
+
+- 清理仓库文档；
+- 检查每位成员的代码和文档留痕；
+- 修复最终测试中发现的问题；
+- 构建并上传 Windows Release；
+- 保持 README、技术栈、集成计划和公共约束文档可供老师直接查看。
+
+完成成果：
+
+- 中文 README；
+- 中文 `AGENTS.md`；
+- 中文技术栈说明；
+- 中文四周集成计划；
+- 删除内部任务草稿；
+- `.gitignore` 防止 `.docx`、`.DS_Store` 和本地草稿误提交；
+- Windows Release 上传到 GitHub。
+
+最终验证命令：
 
 ```bash
 npm test
@@ -109,21 +133,31 @@ npm run smoke:week2
 npm run pack:win:zip
 ```
 
-Release package:
+Release 地址：
 
 ```text
 https://github.com/zhoucaichun/mercury-ai-reader/releases/tag/v0.1.0-prism-reader
 ```
 
-## Final Review Scope
+## 6. 最终仓库应展示的内容
 
-The final repository should show:
+最终仓库应包含：
 
-- runnable desktop application source code;
-- release package for direct testing;
-- formal README with usage, privacy, validation, and member contribution information;
-- shared contracts in `AGENTS.md`;
-- module documents in `docs/features/`;
-- validation reports in `docs/reports/`;
-- OPML test files in `test-opml/`;
-- no real API keys, personal paths, or internal planning drafts committed to the repository.
+- 可运行的桌面应用源码；
+- 可直接下载运行的 Windows Release 包；
+- 中文 README；
+- 公共开发约束和接口文档 `AGENTS.md`；
+- 模块功能文档 `docs/features/`；
+- 阶段报告 `docs/reports/`；
+- 正式技术栈和集成计划 `task-documents/`；
+- OPML 测试文件 `test-opml/`；
+- 单元测试、smoke 测试和打包脚本；
+- 无真实 API Key、个人路径、内部草稿或系统临时文件。
+
+## 7. 当前已知限制
+
+- 当前公开 Release 主要提供 Windows x64 zip 包；
+- macOS / Linux 已预留构建配置，但公开 Release 暂未提供对应安装包；
+- AI 功能需要用户自行配置 OpenAI-compatible 模型服务；
+- 不提供云同步、账号系统或多设备同步；
+- 正文清洗是课程项目级实现，复杂网页可能仍有清洗不完美的情况。
