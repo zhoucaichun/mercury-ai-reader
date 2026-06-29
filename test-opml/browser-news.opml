@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>Prism Reader Test OPML - Browser News</title>
+  </head>
+  <body>
+    <outline text="Browser">
+      <outline
+        text="Mozilla Blog"
+        title="Mozilla Blog"
+        type="rss"
+        xmlUrl="https://blog.mozilla.org/en/feed/"
+        htmlUrl="https://blog.mozilla.org/en/" />
+      <outline
+        text="Brave Blog"
+        title="Brave Blog"
+        type="rss"
+        xmlUrl="https://brave.com/feed/"
+        htmlUrl="https://brave.com/blog/" />
+    </outline>
+  </body>
+</opml>

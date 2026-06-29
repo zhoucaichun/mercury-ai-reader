@@ -1191,7 +1191,7 @@ export function initDatabase(userDataPath: string): Database.Database {
 
 ## 五、LLM 用量记录完整调用链（T2 ↔ T8/T9/T10/T11 对齐）
 
-**背景**：[任务池](../../task-documents/mercury-task-pool-ai-prompts.md) 明确分工：T2 负责 `LLMUsageEvent` 数据结构和存储接口；T8 负责 Agent Runtime 中统一的 usage record 记录契约；T9 负责 Provider 返回 token 信息；T10/T11 负责产生日志或调用统一记录接口。
+**背景**：根据 `AGENTS.md` 与 AI 功能模块契约，T2 负责 `LLMUsageEvent` 数据结构和存储接口；T8 负责 Agent Runtime 中统一的 usage record 记录契约；T9 负责 Provider 返回 token 信息；T10/T11 负责产生日志或调用统一记录接口。
 
 以下是一次完整 Summary 任务的调用链示例（T10 → T9 → T2）：
 
@@ -1434,7 +1434,7 @@ function runMigrations(db: Database.Database): void {
 
 ## 八、Seed / Mock 数据
 
-**背景**：[W1 排期](../../task-documents/mercury-five-week-integration-plan.md) 要求建立 "mock 数据入口，方便其他同学不等后端接口也能开发"。T2 应提供 seed 方法，让 T7（阅读器 UI）、T10（Summary）、T11（Translation）在没有真实同步数据和 LLM 调用的情况下也能联调开发。
+**背景**：项目需要建立开发用 seed 数据入口，方便阅读器 UI、Summary、Translation 等模块在没有真实同步数据或真实 LLM 调用时也能联调开发。
 
 ```ts
 // src/core/database/seed.ts
@@ -1460,13 +1460,13 @@ seed 数据内容：
 - 可选：1-2 条 mock SummaryResult
 - 可选：3-5 条 mock LLMUsageEvent（含不同 provider/model/status）
 
-> T2 注意：W5 排期要求"清理测试数据或示例数据"。seed 方法应在 W5 提供对应的 `cleanSeedData()` 方法。
+> T2 注意：seed 数据仅用于开发和测试，正式发布前应提供对应的 `cleanSeedData()` 方法或确保测试数据不会进入正式用户数据。
 
 ---
 
 ## 九、分阶段实现计划
 
-以下按 [五周排期文档](../../task-documents/mercury-five-week-integration-plan.md) 对 T2 的要求拆解实现节奏。每周末应完成对应接口并通过单元测试。
+以下按项目集成计划对 T2 的要求拆解实现节奏。每个阶段应完成对应接口并通过单元测试。
 
 ### W1（本周）：数据模型草案 + 基础存储接口
 

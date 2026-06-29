@@ -38,7 +38,7 @@
 - [ ] 摘要卡片包含重新生成、复制、清除操作。
 - [ ] Translation 翻译入口在阅读器中清楚可见。
 - [ ] Export Markdown 导出入口在阅读器中清楚可见。
-- [ ] 禁用或 mock 状态的按钮能说明当前状态。
+- [ ] 禁用或占位状态的按钮能说明当前状态。
 - [ ] AI 操作的命名和样式保持一致。
 - [ ] T9 提供 Usage 面板后，用量统计入口容易发现。
 - [ ] Provider 配置入口能清楚表达 base URL / API key / model 的配置状态。
@@ -69,8 +69,8 @@
 
 | 日期 | 区域 | 问题 | 严重程度 | 负责人 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| 2026-05-28 | 阅读器 UI | 项目还没有 React UI 骨架，因此 T7 当前先准备 mock 设计、静态原型和交互审查清单。 | 中 | T1 / T7 | 未关闭 |
-| 2026-06-02 | 阅读器 UI | React 阅读器已通过 Week2ReaderDataPort mock adapter 展示 Feed、文章列表和非空 ArticleContent；后续等待 T2/T5 真实存储端口替换。 | 低 | T7 / T2 / T5 | 跟进中 |
+| 2026-05-28 | 阅读器 UI | 项目还没有 React UI 骨架，因此 T7 当前先准备原型设计、静态原型和交互审查清单。 | 中 | T1 / T7 | 未关闭 |
+| 2026-06-02 | 阅读器 UI | React 阅读器已通过 Week2ReaderDataPort 临时 adapter 展示 Feed、文章列表和非空 ArticleContent；后续等待 T2/T5 真实存储端口替换。 | 低 | T7 / T2 / T5 | 跟进中 |
 
 严重程度说明：
 
@@ -82,16 +82,16 @@
 
 - [x] 已完成阅读器 UI 方案文档。
 - [x] 已创建交互审查清单。
-- [x] 已在 `docs/features/T7-reader-ui-prototype.html` 实现静态 mock UI 原型。
+- [x] 已在 `docs/features/T7-reader-ui-prototype.html` 实现静态 UI 原型。
 - [x] 静态原型已补充加载、空状态、列表错误、正文错误和正文为空状态演示。
 - [x] 静态原型已补充 Summary Agent 摘要卡片、Runtime 状态和重新生成 / 复制 / 清除操作。
 - [x] 静态原型已补充 Provider 配置、Usage 统计摘要和最近调用明细占位。
-- [x] T1 项目骨架可用后，实现 React mock UI。
+- [x] T1 项目骨架可用后，实现 React UI 原型。
 - [ ] React UI 完成后补充截图。
 
 ## 9. 第 2 周 T7 交付物
 
-- [x] `src/features/reader/index.ts` 导出符合 Week2ReaderDataPort 的 mock adapter。
+- [x] `src/features/reader/index.ts` 导出符合 Week2ReaderDataPort 的临时 adapter。
 - [x] React 页面通过 `listFeeds / listArticles / getArticleContent` 展示文章列表和阅读页。
 - [x] 点击文章后读取非空 `sourceHtml / cleanedHtml / canonicalMarkdown` 对应内容。
 - [x] 阅读页展示文章标题、来源、发布时间、原文入口和 cleaned HTML 正文。

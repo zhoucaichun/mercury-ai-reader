@@ -6,7 +6,7 @@
 
 ## 1. 本次交付说明
 
-本文件按照最新 `AGENTS.md`、《各组员对齐要求.docx》以及当前 GitHub Issues 中的 T6 / T8 / T9 对齐信息整理。Summary Agent 本周不阻塞 Week 2 的 Feed / OPML / Sync / 本地存储 / 文章列表主链路，但必须提前对齐 `canonicalMarkdown`、Agent Runtime、Provider 和 Usage 接口，方便后续接入阅读页。
+本文件按照 `AGENTS.md` 中的公共接口约束以及当前功能实现整理。Summary Agent 不阻塞 Feed / OPML / Sync / 本地存储 / 文章列表主链路，但需要对齐 `canonicalMarkdown`、Agent Runtime、Provider 和 Usage 接口，方便接入阅读页。
 
 本次文档覆盖：
 

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>Prism Reader Test OPML - Duplicate And Invalid</title>
+  </head>
+  <body>
+    <outline text="Validation">
+      <outline
+        text="CSS-Tricks"
+        title="CSS-Tricks"
+        type="rss"
+        xmlUrl="https://css-tricks.com/feed/"
+        htmlUrl="https://css-tricks.com/" />
+      <outline
+        text="CSS-Tricks Duplicate"
+        title="CSS-Tricks Duplicate"
+        type="rss"
+        xmlUrl="https://css-tricks.com/feed/"
+        htmlUrl="https://css-tricks.com/" />
+      <outline
+        text="Invalid FTP Feed"
+        title="Invalid FTP Feed"
+        type="rss"
+        xmlUrl="ftp://example.com/feed.xml"
+        htmlUrl="https://example.com/" />
+      <outline
+        text="Missing URL"
+        title="Missing URL"
+        type="rss"
+        htmlUrl="https://example.com/" />
+    </outline>
+  </body>
+</opml>

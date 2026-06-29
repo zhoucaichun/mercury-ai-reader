@@ -1076,7 +1076,7 @@
                 <h1 class="brand-title">Mercury</h1>
                 <p class="brand-subtitle">本地优先 AI 阅读器 · T7 原型</p>
               </div>
-              <span class="status-dot" aria-label="Mock data ready">Ready</span>
+              <span class="status-dot" aria-label="Prototype data ready">Ready</span>
               <button class="collapse-button" type="button" data-toggle-left title="收起文章列表" aria-label="收起文章列表">‹</button>
             </div>
           </div>
@@ -1090,7 +1090,7 @@
           </div>
           <div class="list-state">
             <span id="listCount">3 篇文章</span>
-            <span>Mock 数据</span>
+            <span>原型数据</span>
           </div>
           <div class="article-list" id="articleList"></div>
         </div>
@@ -1137,7 +1137,7 @@
           </div>
           <div class="status-card">
             <span>演示范围</span>
-            <strong>T7 mock UI</strong>
+            <strong>T7 Reader Prototype</strong>
           </div>
         </div>
 
@@ -1403,7 +1403,7 @@
             <p>文章列表负责快速判断“我想读哪篇”，阅读器负责帮助用户进入内容本身。摘要、翻译和导出都应该是自然延伸，而不是打断阅读的按钮堆叠。</p>
             <h2>阅读设置的边界</h2>
             <p>本周原型优先实现字号、行距、阅读宽度和主题。它们足够支撑课堂演示，也能证明后续 React 组件有明确状态。</p>
-            <blockquote>验收时要能说明：即使后端还没完成，T7 也可以用 mock 数据验证阅读路径。</blockquote>
+            <blockquote>验收时要能说明：即使上下游服务尚未接入，T7 也可以用原型数据验证阅读路径。</blockquote>
             <p>等 T1 骨架完成后，这个静态原型可以拆成 ArticleList、ReaderView、ReaderToolbar 和 ReadingSettingsPanel 四类组件。</p>
           `
         },
@@ -1436,7 +1436,7 @@
             "Summary、Translation、Export、Usage 都很重要，但它们应该围绕文章服务，不应该压过正文。",
           body: `
             <p>AI 功能入口的设计重点是可发现、可理解、可复用。摘要和翻译属于文章级动作，适合放在阅读器顶部工具栏；Usage 属于应用级信息，后续可以接到全局导航或设置区。</p>
-            <p>当功能还没有接入真实服务时，按钮可以保持可点击并给出 mock 提示，这样老师和组员都能理解入口设计。</p>
+            <p>当功能还没有接入真实服务时，按钮可以保持可点击并给出状态提示，这样评审者和组员都能理解入口设计。</p>
             <h2>审查标准</h2>
             <p>每次集成后，T7 需要检查入口是否统一、状态是否明确、错误提示是否不像程序崩了。最终演示里的阅读体验应该稳定、清楚、舒服。</p>
           `
@@ -1595,7 +1595,7 @@
             <div class="state-box" role="alert">
               <strong>正文清洗失败</strong>
               Reader Pipeline 暂时没有返回 cleaned HTML。可以重试清洗，或先打开原文链接。
-              <button type="button" data-retry-state>恢复 mock 正文</button>
+              <button type="button" data-retry-state>恢复正文</button>
             </div>
           `;
           readerBody.querySelector("[data-retry-state]").addEventListener("click", () => {

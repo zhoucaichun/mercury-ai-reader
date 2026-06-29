@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>Prism Reader Test OPML - Tech Feeds</title>
+  </head>
+  <body>
+    <outline text="Tech">
+      <outline
+        text="Ruanyifeng"
+        title="Ruanyifeng"
+        type="atom"
+        xmlUrl="https://www.ruanyifeng.com/blog/atom.xml"
+        htmlUrl="https://www.ruanyifeng.com/blog/" />
+      <outline
+        text="CSS-Tricks"
+        title="CSS-Tricks"
+        type="rss"
+        xmlUrl="https://css-tricks.com/feed/"
+        htmlUrl="https://css-tricks.com/" />
+      <outline
+        text="xkcd"
+        title="xkcd"
+        type="atom"
+        xmlUrl="https://xkcd.com/atom.xml"
+        htmlUrl="https://xkcd.com/" />
+    </outline>
+  </body>
+</opml>

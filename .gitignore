@@ -147,3 +147,13 @@ vite.config.ts.timestamp-*
 dist-electron/
 release/
 .claude/
+
+# Local system files
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Local planning drafts
+*.docx
+~$*.docx
+修改任务.md
