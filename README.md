@@ -114,20 +114,20 @@ test-opml/                        OPML 导入测试文件
 
 ## 成员分工与仓库留痕
 
-| 成员 | 负责内容 | 仓库留痕 |
-| --- | --- | --- |
-| T0 周彩纯 | 项目管理、集成测试、打包发布、仓库文档整理 | `README.md`、`AGENTS.md`、`task-documents/`、Release、集成提交 |
-| T1 张珈鸣 | 项目骨架、Electron / React / Vite 初始化、构建脚本 | `package.json`、`electron/`、`src/app/`、`src/main.tsx`、`vite.config.ts` |
-| T2 林杨 | 数据模型、SQLite 本地存储、stores、Storage Adapter | `src/core/database/`、`docs/features/T2-data-model.md` |
-| T3 周康 | Feed URL 添加、RSS / Atom Parser、解析测试和报告 | `src/features/feed/parser/`、`test/`、`docs/features/T3-feed-parser.md`、`docs/reports/T3-*` |
-| T4 李欣然 | OPML 导入、订阅源管理 | `src/features/feed/opml/`、`src/features/feed/subscriptions/`、`docs/features/T4-opml-subscriptions.md`、`test-opml/` |
-| T5 夏培玮 | Feed 同步、文章去重、Week 2 主链路 smoke 测试 | `src/features/feed/sync/`、`docs/features/T5-sync-design.md` |
-| T6 杜茗天 | Reader Pipeline、内容清洗、canonical Markdown | `src/features/reader/pipeline/`、`docs/features/T6-reader-pipeline.md`、`docs/features/T6-reader-pipeline-fixtures/` |
-| T7 余婧 | 阅读器 UI、交互设计、主题、笔记、高亮、阅读状态 | `src/features/reader/`、`docs/features/T7-reader-ui-plan.md`、`docs/features/T7-ux-review-checklist.md` |
-| T8 曾夏杨 | Agent Runtime、Prompt 加载、AI 任务状态 | `src/features/agent/runtime/`、`src/features/agent/prompts/`、`docs/features/T8-agent-runtime.md` |
-| T9 蔡钦楠 | LLM Provider、模型配置、Usage 记录和设置面板 | `src/features/agent/providers/`、`src/features/usage/`、`docs/features/T9-llm-provider-usage.md` |
-| T10 宋金淼 | Summary Agent、摘要结果契约和测试 | `src/features/agent/summary/`、`docs/features/T10-summary-agent.md` |
-| T11 余富康 | Translation Agent、单篇 Markdown 导出 | `src/features/agent/translation/`、`src/features/export/`、`docs/features/T11-translation-export.md` |
+| 编号 | 姓名 | GitHub 账号 | 负责内容 | 仓库留痕 |
+| --- | --- | --- | --- | --- |
+| T0 | 周彩纯 | [@zhoucaichun](https://github.com/zhoucaichun) | 项目管理、集成测试、打包发布、仓库文档整理 | `README.md`、`AGENTS.md`、`task-documents/`、Release、集成提交 |
+| T1 | 张珈鸣 | [@DonFinliani](https://github.com/DonFinliani) | 项目骨架、Electron / React / Vite 初始化、构建脚本 | `package.json`、`electron/`、`src/app/`、`src/main.tsx`、`vite.config.ts` |
+| T2 | 林杨 | [@lyTAT](https://github.com/lyTAT) | 数据模型、SQLite 本地存储、stores、Storage Adapter | `src/core/database/`、`docs/features/T2-data-model.md` |
+| T3 | 周康 | [@ReXT9527](https://github.com/ReXT9527) | Feed URL 添加、RSS / Atom Parser、解析测试和报告 | `src/features/feed/parser/`、`test/`、`docs/features/T3-feed-parser.md`、`docs/reports/T3-*` |
+| T4 | 李欣然 | [@ranwan20](https://github.com/ranwan20) | OPML 导入、订阅源管理 | `src/features/feed/opml/`、`src/features/feed/subscriptions/`、`docs/features/T4-opml-subscriptions.md`、`test-opml/` |
+| T5 | 夏培玮 | [@maipower](https://github.com/maipower) | Feed 同步、文章去重、Week 2 主链路 smoke 测试 | `src/features/feed/sync/`、`docs/features/T5-sync-design.md` |
+| T6 | 杜茗天 | [@jieshibang520](https://github.com/jieshibang520) | Reader Pipeline、内容清洗、canonical Markdown | `src/features/reader/pipeline/`、`docs/features/T6-reader-pipeline.md`、`docs/features/T6-reader-pipeline-fixtures/` |
+| T7 | 余婧 | [@allacnobug](https://github.com/allacnobug) | 阅读器 UI、交互设计、主题、笔记、高亮、阅读状态 | `src/features/reader/`、`docs/features/T7-reader-ui-plan.md`、`docs/features/T7-ux-review-checklist.md` |
+| T8 | 曾夏杨 | [@zxy-1a](https://github.com/zxy-1a) | Agent Runtime、Prompt 加载、AI 任务状态 | `src/features/agent/runtime/`、`src/features/agent/prompts/`、`docs/features/T8-agent-runtime.md` |
+| T9 | 蔡钦楠 | [@QinnanCai0115](https://github.com/QinnanCai0115) | LLM Provider、模型配置、Usage 记录和设置面板 | `src/features/agent/providers/`、`src/features/usage/`、`docs/features/T9-llm-provider-usage.md` |
+| T10 | 宋金淼 | [@songjinmiao](https://github.com/songjinmiao) | Summary Agent、摘要结果契约和测试 | `src/features/agent/summary/`、`docs/features/T10-summary-agent.md` |
+| T11 | 余富康 | [@suzy327](https://github.com/suzy327) | Translation Agent、单篇 Markdown 导出 | `src/features/agent/translation/`、`src/features/export/`、`docs/features/T11-translation-export.md` |
 
 ## 本地开发
 
